@@ -262,3 +262,16 @@ impl Vst3Plugin for Taiyang {
 }
 
 nih_export_vst3!(Taiyang);
+
+impl ClapPlugin for Taiyang {
+    const CLAP_ID: &'static str = "com.jieneng.taiyang";
+    const CLAP_DESCRIPTION: Option<&'static str> = Some("SoundFont Synthesizer based on XSynth");
+    const CLAP_MANUAL_URL: Option<&'static str> = Some("https://space.bilibili.com/433246974");
+    const CLAP_SUPPORT_URL: Option<&'static str> = None;
+    const CLAP_FEATURES: &'static [ClapFeature] = &[
+        ClapFeature::Instrument,
+        ClapFeature::Synthesizer,
+    ];
+}
+
+nih_export_clap!(Taiyang);

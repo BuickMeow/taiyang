@@ -29,7 +29,9 @@ pub struct SoundfontEntry {
 static GLOBAL_SF_CACHE: LazyLock<RwLock<HashMap<(String, u32), Arc<dyn SoundfontBase>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
-/// 需要 Chase 的 CC 列表（按发送顺序排列，RPN 相关必须先发）
+// 只 Chase 最关键的 CC，避免和 DAW 自己的 Chase 冲突导致声音不稳定
+// RPN/Bank Select/音色修改器 由 DAW 或 UI 参数控制，不在此处 Chase
+// Pitch Bend 是 pianoroll 曲线，Chase 固定值没有意义
 const CHASE_CC_LIST: &[u8] = &[
     101, // RPN MSB
     100, // RPN LSB
@@ -90,7 +92,9 @@ impl SynthEngine {
         self.pb_state = Some(value);
     }
 
-    /// 播放开始时：Reset All Controllers + Chase 所有记录的 CC + PB（所有通道）
+    /// 播放开始时：Kill 所有音符 + Reset All Controllers + Chase 关键 CC
+    /// 只 Chase Sustain/Volume/Expression，避免和 DAW 事件冲突导致声音不稳定
+    /// Pitch Bend 是 pianoroll 曲线，不 Chase（等 DAW 发送当前值）
     pub fn reset_and_chase(&mut self) {
         for ch in 0..16u32 {
             // 1. Kill 所有音符（防止卡音）
@@ -105,7 +109,7 @@ impl SynthEngine {
                 ChannelEvent::Audio(ChannelAudioEvent::ResetControl),
             ));
 
-            // 3. Chase：按顺序重新发送所有记录过的 CC
+            // 3. Chase 关键 CC
             for &cc_num in CHASE_CC_LIST {
                 if let Some(value) = self.cc_state[cc_num as usize] {
                     self.core.send_event(SynthEvent::Channel(
@@ -115,16 +119,6 @@ impl SynthEngine {
                         )),
                     ));
                 }
-            }
-
-            // 4. Chase Pitch Bend
-            if let Some(pb) = self.pb_state {
-                self.core.send_event(SynthEvent::Channel(
-                    ch,
-                    ChannelEvent::Audio(ChannelAudioEvent::Control(
-                        ControlEvent::PitchBendValue(pb)
-                    )),
-                ));
             }
         }
     }
