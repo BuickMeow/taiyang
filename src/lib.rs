@@ -25,6 +25,10 @@ pub struct Taiyang {
     last_program: u8,
     last_is_drum: bool,
     was_playing: bool,
+    last_pos_beats: f64,
+    last_pbr: i32,
+    last_fine_tune: i32,
+    last_coarse_tune: i32,
 }
 
 struct Pipeline {
@@ -71,6 +75,10 @@ impl Default for Taiyang {
             last_program: 0,
             last_is_drum: false,
             was_playing: false,
+            last_pos_beats: -1.0,
+            last_pbr: -1,
+            last_fine_tune: -101,
+            last_coarse_tune: -65,
         }
     }
 }
@@ -106,9 +114,8 @@ impl Plugin for Taiyang {
         buffer_config: &BufferConfig,
         _context: &mut impl InitContext<Self>,
     ) -> bool {
-        let max_voices = self.params.max_voices.value() as usize;
         let sample_rate = buffer_config.sample_rate;
-        let mut engine = SynthEngine::new(sample_rate, max_voices);
+        let mut engine = SynthEngine::new(sample_rate, 0);
 
         let entries = self.params.soundfont_entries.lock().clone();
         if !entries.is_empty() {
@@ -135,6 +142,19 @@ impl Plugin for Taiyang {
         self.last_bank = bank;
         self.last_program = program;
 
+        // 初始化 RPN 参数
+        let pbr = self.params.pitch_bend_range.value();
+        engine.send_rpn(0x0000, pbr as u16);
+        self.last_pbr = pbr;
+
+        let fine = self.params.master_fine_tune.value();
+        engine.send_rpn(0x0001, (fine + 8192) as u16);
+        self.last_fine_tune = fine;
+
+        let coarse = self.params.master_coarse_tune.value();
+        engine.send_rpn(0x0002, (coarse + 64) as u16);
+        self.last_coarse_tune = coarse;
+
         *self.engine.lock() = Some(engine);
 
         let max_frames = buffer_config.max_buffer_size as usize;
@@ -160,8 +180,9 @@ impl Plugin for Taiyang {
         if let Some(ref mut engine) = engine_guard.as_mut() {
             let transport = context.transport();
             let is_playing = transport.playing;
+            let pos_beats = transport.pos_beats().unwrap_or(0.0);
 
-            // 1. DAW 停止 → 松开踏板 + 停止所有音符
+            // 1. DAW 停止 → Kill 所有音符
             if !is_playing && self.was_playing {
                 engine.all_notes_killed();
             }
@@ -169,6 +190,14 @@ impl Plugin for Taiyang {
             // 2. DAW 开始播放（从停止恢复）→ Reset + Chase
             if is_playing && !self.was_playing {
                 engine.reset_and_chase();
+            }
+
+            // 3. 播放中跳转播放头 → Reset + Chase
+            if is_playing && self.was_playing {
+                let delta = (pos_beats - self.last_pos_beats).abs();
+                if delta > 1.0 {
+                    engine.reset_and_chase();
+                }
             }
 
             let mut has_midi = false;
@@ -204,7 +233,27 @@ impl Plugin for Taiyang {
                 self.last_is_drum = desired_drum;
             }
 
+            // RPN 参数变化检测
+            let current_pbr = self.params.pitch_bend_range.value();
+            if current_pbr != self.last_pbr {
+                engine.send_rpn(0x0000, current_pbr as u16);
+                self.last_pbr = current_pbr;
+            }
+
+            let current_fine = self.params.master_fine_tune.value();
+            if current_fine != self.last_fine_tune {
+                engine.send_rpn(0x0001, (current_fine + 8192) as u16);
+                self.last_fine_tune = current_fine;
+            }
+
+            let current_coarse = self.params.master_coarse_tune.value();
+            if current_coarse != self.last_coarse_tune {
+                engine.send_rpn(0x0002, (current_coarse + 64) as u16);
+                self.last_coarse_tune = current_coarse;
+            }
+
             self.was_playing = is_playing;
+            self.last_pos_beats = pos_beats;
             self.pipeline.render(buffer, engine, &self.params);
         }
 

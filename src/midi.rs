@@ -44,16 +44,10 @@ pub fn handle_note_event(
             )));
         }
         NoteEvent::MidiPitchBend { value, .. } => {
-            // 兼容两种输入：原始 MIDI 值 (0~16383) 或已归一化值 (-1.0~1.0)
-            let normalized = if value > 1.0 || value < -1.0 {
-                (value - 8192.0) / 8192.0
-            } else {
-                value
-            };
+            let normalized = (value - 0.5) * 2.0;
+            engine.update_pb(normalized);
             engine.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
-                ChannelAudioEvent::Control(ControlEvent::PitchBendValue(
-                    normalized.clamp(-1.0, 1.0)
-                ))
+                ChannelAudioEvent::Control(ControlEvent::PitchBendValue(normalized))
             )));
         }
         NoteEvent::MidiProgramChange { program, .. } => {

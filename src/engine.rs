@@ -52,6 +52,7 @@ pub struct SynthEngine {
     sample_rate: f32,
     presets: Vec<PresetInfo>,
     cc_state: [Option<u8>; 128],
+    pb_state: Option<f32>,
 }
 
 impl SynthEngine {
@@ -75,6 +76,7 @@ impl SynthEngine {
             sample_rate,
             presets: Vec::new(),
             cc_state: [None; 128],
+            pb_state: None,
         }
     }
 
@@ -83,7 +85,12 @@ impl SynthEngine {
         self.cc_state[cc as usize] = Some(value);
     }
 
-    /// 播放开始时：Reset All Controllers + Chase 所有记录的 CC
+    /// 记录 Pitch Bend 最新值（用于 Chase）
+    pub fn update_pb(&mut self, value: f32) {
+        self.pb_state = Some(value);
+    }
+
+    /// 播放开始时：Reset All Controllers + Chase 所有记录的 CC + PB
     pub fn reset_and_chase(&mut self) {
         // 1. Kill 所有音符（防止卡音）
         self.core.send_event(SynthEvent::Channel(
@@ -107,6 +114,16 @@ impl SynthEngine {
                     )),
                 ));
             }
+        }
+
+        // 4. Chase Pitch Bend
+        if let Some(pb) = self.pb_state {
+            self.core.send_event(SynthEvent::Channel(
+                0,
+                ChannelEvent::Audio(ChannelAudioEvent::Control(
+                    ControlEvent::PitchBendValue(pb)
+                )),
+            ));
         }
     }
 
@@ -181,6 +198,30 @@ impl SynthEngine {
 
     pub fn send_event(&mut self, event: SynthEvent) {
         self.core.send_event(event);
+    }
+
+    pub fn send_rpn(&mut self, rpn: u16, value: u16) {
+        let rpn_msb = ((rpn >> 7) & 0x7F) as u8;
+        let rpn_lsb = (rpn & 0x7F) as u8;
+        let data_msb = ((value >> 7) & 0x7F) as u8;
+        let data_lsb = (value & 0x7F) as u8;
+
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(101, rpn_msb))),
+        ));
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(100, rpn_lsb))),
+        ));
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(6, data_msb))),
+        ));
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(38, data_lsb))),
+        ));
     }
 
     pub fn send_preset(&mut self, bank: u8, program: u8) {

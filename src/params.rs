@@ -21,9 +21,6 @@ pub struct TaiyangParams {
     #[id = "gain"]
     pub gain: FloatParam,
 
-    #[id = "max_voices"]
-    pub max_voices: IntParam,
-
     #[id = "is_drum"]
     pub is_drum: BoolParam,
 
@@ -35,6 +32,15 @@ pub struct TaiyangParams {
 
     #[id = "selected_program"]
     pub selected_program: IntParam,
+
+    #[id = "pitch_bend_range"]
+    pub pitch_bend_range: IntParam,
+
+    #[id = "master_fine_tune"]
+    pub master_fine_tune: IntParam,
+
+    #[id = "master_coarse_tune"]
+    pub master_coarse_tune: IntParam,
 }
 
 impl Default for TaiyangParams {
@@ -48,14 +54,7 @@ impl Default for TaiyangParams {
                 FloatRange::Linear { min: -30.0, max: 12.0 },
             )
             .with_smoother(SmoothingStyle::Linear(5.0))
-            .with_unit(" dB")
-            .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
-            .with_string_to_value(formatters::s2v_f32_gain_to_db()),
-            max_voices: IntParam::new(
-                "Max Voices",
-                1000,
-                IntRange::Linear { min: 1, max: 10000 },
-            ),
+            .with_unit(" dB"),
             is_drum: BoolParam::new("Drum Mode", false),
             preset_locked: BoolParam::new("Lock Preset", false),
             selected_bank: IntParam::new(
@@ -67,6 +66,21 @@ impl Default for TaiyangParams {
                 "Program",
                 0,
                 IntRange::Linear { min: 0, max: 127 },
+            ),
+            pitch_bend_range: IntParam::new(
+                "Pitch Bend Range",
+                2,
+                IntRange::Linear { min: 0, max: 127 },
+            ),
+            master_fine_tune: IntParam::new(
+                "Fine Tune",
+                0,
+                IntRange::Linear { min: -100, max: 100 },
+            ),
+            master_coarse_tune: IntParam::new(
+                "Coarse Tune",
+                0,
+                IntRange::Linear { min: -64, max: 63 },
             ),
         }
     }

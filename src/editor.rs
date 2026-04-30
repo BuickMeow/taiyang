@@ -59,6 +59,27 @@ fn draw_params(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorState) {
 
         ui.separator();
 
+        ui.label("PBR:");
+        let mut pbr = state.params.pitch_bend_range.value() as i32;
+        if ui.add(egui::DragValue::new(&mut pbr).range(0..=24)).changed() {
+            setter.set_parameter(&state.params.pitch_bend_range, pbr);
+        }
+
+        ui.separator();
+
+        ui.label("Tune:");
+        let mut coarse = state.params.master_coarse_tune.value() as i32;
+        if ui.add(egui::DragValue::new(&mut coarse).range(-64..=63)).changed() {
+            setter.set_parameter(&state.params.master_coarse_tune, coarse);
+        }
+        ui.label(".");
+        let mut fine = state.params.master_fine_tune.value() as i32;
+        if ui.add(egui::DragValue::new(&mut fine).range(-100..=100)).changed() {
+            setter.set_parameter(&state.params.master_fine_tune, fine);
+        }
+
+        ui.separator();
+
         ui.label("Voices:");
         let voices = state.engine.lock().as_ref()
             .map(|e| e.active_voices())
