@@ -4,8 +4,9 @@ use xsynth_core::{
     channel_group::{ChannelGroup, ChannelGroupConfig, ParallelismOptions, SynthEvent, SynthFormat},
     soundfont::{SampleSoundfont, SoundfontInitOptions, SoundfontBase},
 };
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::collections::HashMap;
+use parking_lot::RwLock;
 use nih_plug::prelude::nih_log;
 
 #[derive(Clone, Debug)]
@@ -23,10 +24,14 @@ pub struct SoundfontEntry {
     pub enabled: bool,
 }
 
+/// 全局音色库缓存，所有 Taiyang 实例共享
+/// Key: (文件路径, 采样率) —— Soundfont 与采样率绑定，不同采样率不能复用
+static GLOBAL_SF_CACHE: LazyLock<RwLock<HashMap<(String, u32), Arc<dyn SoundfontBase>>>> =
+    LazyLock::new(|| RwLock::new(HashMap::new()));
+
 pub struct SynthEngine {
     core: ChannelGroup,
     sample_rate: f32,
-    sf_cache: HashMap<String, Arc<dyn SoundfontBase>>,
     presets: Vec<PresetInfo>,
 }
 
@@ -49,7 +54,6 @@ impl SynthEngine {
         Self {
             core,
             sample_rate,
-            sf_cache: HashMap::new(),
             presets: Vec::new(),
         }
     }
@@ -63,7 +67,9 @@ impl SynthEngine {
                 continue;
             }
 
-            let sf = if let Some(sf) = self.sf_cache.get(&entry.path) {
+            let cache_key = (entry.path.clone(), self.sample_rate as u32);
+
+            let sf = if let Some(sf) = GLOBAL_SF_CACHE.read().get(&cache_key) {
                 sf.clone()
             } else {
                 match SampleSoundfont::new(
@@ -73,7 +79,8 @@ impl SynthEngine {
                 ) {
                     Ok(sf) => {
                         let arc = Arc::new(sf) as Arc<dyn SoundfontBase>;
-                        self.sf_cache.insert(entry.path.clone(), arc.clone());
+                        GLOBAL_SF_CACHE.write().insert(cache_key, arc.clone());
+                        nih_log!("Loaded soundfont into global cache: {}", entry.path);
                         arc
                     }
                     Err(e) => {
