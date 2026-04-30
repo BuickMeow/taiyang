@@ -208,75 +208,38 @@ impl SynthEngine {
     }
 
     pub fn set_pitch_bend_range_all(&mut self, semitones: u8) {
-        // RPN 0x0000: Pitch Bend Range
-        // XSynth: pitch_bend_sensitivity = MSB + LSB/100.0
+        // 直接发送 XSynth 的 PitchBendSensitivity，跳过 CC 101/100/6/38
         for ch in 0..16u32 {
             self.core.send_event(SynthEvent::Channel(
                 ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(101, 0)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(100, 0)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(6, semitones)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(38, 0)))),
-            );
+                ChannelEvent::Audio(ChannelAudioEvent::Control(
+                    ControlEvent::PitchBendSensitivity(semitones as f32)
+                )),
+            ));
         }
     }
 
     pub fn set_fine_tune_all(&mut self, cents: i32) {
-        // RPN 0x0001: Fine Tune
-        // XSynth: val = MSB<<6 + LSB, (val - 4096) / 4096 * 100
-        let val = (cents + 4096) as u16;
-        let msb = (val >> 6) as u8;
-        let lsb = (val & 0x3F) as u8;
+        // 直接发送 XSynth 的 FineTune，跳过 CC 101/100/6/38
         for ch in 0..16u32 {
             self.core.send_event(SynthEvent::Channel(
                 ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(101, 0)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(100, 1)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(6, msb)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(38, lsb)))),
-            );
+                ChannelEvent::Audio(ChannelAudioEvent::Control(
+                    ControlEvent::FineTune(cents as f32)
+                )),
+            ));
         }
     }
 
     pub fn set_coarse_tune_all(&mut self, semitones: i32) {
-        // RPN 0x0002: Coarse Tune
-        // XSynth: coarse_tune = value - 64.0
-        let value = (semitones + 64) as u8;
+        // 直接发送 XSynth 的 CoarseTune，跳过 CC 101/100/6/38
         for ch in 0..16u32 {
             self.core.send_event(SynthEvent::Channel(
                 ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(101, 0)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(100, 2)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(6, value)))),
-            );
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(38, 0)))),
-            );
+                ChannelEvent::Audio(ChannelAudioEvent::Control(
+                    ControlEvent::CoarseTune(semitones as f32)
+                )),
+            ));
         }
     }
 
