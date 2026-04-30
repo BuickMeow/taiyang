@@ -49,6 +49,9 @@ pub struct SynthEngine {
     presets: Vec<PresetInfo>,
     cc_state: [[Option<u8>; 128]; 16],
     pb_state: [Option<f32>; 16],
+    last_pbr: Option<u8>,
+    last_fine_tune: Option<i32>,
+    last_coarse_tune: Option<i32>,
 }
 
 impl SynthEngine {
@@ -73,6 +76,9 @@ impl SynthEngine {
             presets: Vec::new(),
             cc_state: [[None; 128]; 16],
             pb_state: [None; 16],
+            last_pbr: None,
+            last_fine_tune: None,
+            last_coarse_tune: None,
         }
     }
 
@@ -90,24 +96,18 @@ impl SynthEngine {
         }
     }
 
-    /// 播放开始时：Kill 所有音符 + Reset All Controllers + Chase 关键 CC
-    /// 只 Chase Sustain/Volume/Expression，避免和 DAW 事件冲突导致声音不稳定
-    /// Pitch Bend 是 pianoroll 曲线，不 Chase（等 DAW 发送当前值）
     pub fn reset_and_chase(&mut self) {
         for ch in 0..16u32 {
-            // 1. Kill 所有音符（防止卡音）
             self.core.send_event(SynthEvent::Channel(
                 ch,
                 ChannelEvent::Audio(ChannelAudioEvent::AllNotesKilled),
             ));
 
-            // 2. Reset All Controllers
             self.core.send_event(SynthEvent::Channel(
                 ch,
                 ChannelEvent::Audio(ChannelAudioEvent::ResetControl),
             ));
 
-            // 3. Chase 关键 CC（按通道）
             if let Some(ch_state) = self.cc_state.get(ch as usize) {
                 for &cc_num in CHASE_CC_LIST {
                     if let Some(value) = ch_state[cc_num as usize] {
@@ -119,6 +119,29 @@ impl SynthEngine {
                         ));
                     }
                 }
+            }
+        }
+
+        // Chase RPN 语义化参数（PBR/Fine/Coarse 走 XSynth 专用事件，不依赖 CC101/100）
+        if let Some(pbr) = self.last_pbr {
+            for ch in 0..16u32 {
+                self.core.send_event(SynthEvent::Channel(ch, ChannelEvent::Audio(
+                    ChannelAudioEvent::Control(ControlEvent::PitchBendSensitivity(pbr as f32))
+                )));
+            }
+        }
+        if let Some(fine) = self.last_fine_tune {
+            for ch in 0..16u32 {
+                self.core.send_event(SynthEvent::Channel(ch, ChannelEvent::Audio(
+                    ChannelAudioEvent::Control(ControlEvent::FineTune(fine as f32))
+                )));
+            }
+        }
+        if let Some(coarse) = self.last_coarse_tune {
+            for ch in 0..16u32 {
+                self.core.send_event(SynthEvent::Channel(ch, ChannelEvent::Audio(
+                    ChannelAudioEvent::Control(ControlEvent::CoarseTune(coarse as f32))
+                )));
             }
         }
     }
@@ -208,7 +231,7 @@ impl SynthEngine {
     }
 
     pub fn set_pitch_bend_range_all(&mut self, semitones: u8) {
-        // 直接发送 XSynth 的 PitchBendSensitivity，跳过 CC 101/100/6/38
+        self.last_pbr = Some(semitones);
         for ch in 0..16u32 {
             self.core.send_event(SynthEvent::Channel(
                 ch,
@@ -220,7 +243,7 @@ impl SynthEngine {
     }
 
     pub fn set_fine_tune_all(&mut self, cents: i32) {
-        // 直接发送 XSynth 的 FineTune，跳过 CC 101/100/6/38
+        self.last_fine_tune = Some(cents);
         for ch in 0..16u32 {
             self.core.send_event(SynthEvent::Channel(
                 ch,
@@ -232,7 +255,7 @@ impl SynthEngine {
     }
 
     pub fn set_coarse_tune_all(&mut self, semitones: i32) {
-        // 直接发送 XSynth 的 CoarseTune，跳过 CC 101/100/6/38
+        self.last_coarse_tune = Some(semitones);
         for ch in 0..16u32 {
             self.core.send_event(SynthEvent::Channel(
                 ch,
