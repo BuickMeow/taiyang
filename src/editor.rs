@@ -43,14 +43,6 @@ pub fn create(
 
 fn draw_params(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorState) {
     ui.horizontal(|ui| {
-        ui.label("MIDI Channel:");
-        let mut channel = state.params.midi_channel.value() as i32;
-        if ui.add(egui::DragValue::new(&mut channel).range(1..=16)).changed() {
-            setter.set_parameter(&state.params.midi_channel, channel);
-        }
-
-        ui.separator();
-
         let mut is_drum = state.params.is_drum.value();
         if ui.checkbox(&mut is_drum, "Drum").changed() {
             setter.set_parameter(&state.params.is_drum, is_drum);

@@ -88,7 +88,7 @@ impl Plugin for Taiyang {
         names: PortNames::const_default(),
     }];
 
-    const MIDI_INPUT: MidiConfig = MidiConfig::Basic;
+    const MIDI_INPUT: MidiConfig = MidiConfig::MidiCCs;
     const MIDI_OUTPUT: MidiConfig = MidiConfig::None;
 
     type SysExMessage = ();
@@ -156,11 +156,15 @@ impl Plugin for Taiyang {
         let mut engine_guard = self.engine.lock();
 
         if let Some(ref mut engine) = engine_guard.as_mut() {
-            let midi_channel = self.params.midi_channel.value() as u8;
-            let target_ch = midi_channel.saturating_sub(1);
+            let mut has_midi = false;
+            let mut has_ch10 = false;
 
             while let Some(event) = context.next_event() {
-                midi::handle_note_event(event, target_ch, engine, &self.params);
+                has_midi = true;
+                if midi::is_channel_10(&event) {
+                    has_ch10 = true;
+                }
+                midi::handle_note_event(event, engine, &self.params);
             }
 
             let current_bank = self.params.selected_bank.value() as u8;
@@ -171,10 +175,18 @@ impl Plugin for Taiyang {
                 self.last_program = current_program;
             }
 
-            let current_is_drum = self.params.is_drum.value();
-            if current_is_drum != self.last_is_drum {
-                engine.set_percussion_mode(current_is_drum);
-                self.last_is_drum = current_is_drum;
+            let force_drum = self.params.is_drum.value();
+            let desired_drum = if force_drum {
+                true
+            } else if has_midi {
+                has_ch10
+            } else {
+                self.last_is_drum
+            };
+
+            if desired_drum != self.last_is_drum {
+                engine.set_percussion_mode(desired_drum);
+                self.last_is_drum = desired_drum;
             }
 
             self.pipeline.render(buffer, engine, &self.params);

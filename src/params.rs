@@ -18,9 +18,6 @@ pub struct TaiyangParams {
     #[persist = "soundfont_entries"]
     pub soundfont_entries: Arc<Mutex<Vec<SoundfontEntryData>>>,
 
-    #[id = "midi_channel"]
-    pub midi_channel: IntParam,
-
     #[id = "gain"]
     pub gain: FloatParam,
 
@@ -45,11 +42,6 @@ impl Default for TaiyangParams {
         Self {
             editor_state: EguiState::from_size(640, 480),
             soundfont_entries: Arc::new(Mutex::new(Vec::new())),
-            midi_channel: IntParam::new(
-                "MIDI Channel",
-                1,
-                IntRange::Linear { min: 1, max: 16 },
-            ),
             gain: FloatParam::new(
                 "Gain",
                 0.0,
