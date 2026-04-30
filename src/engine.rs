@@ -52,6 +52,8 @@ pub struct SynthEngine {
     last_pbr: Option<u8>,
     last_fine_tune: Option<i32>,
     last_coarse_tune: Option<i32>,
+    vol_state: [u8; 16],
+    pb_range: u8,
 }
 
 impl SynthEngine {
@@ -79,6 +81,8 @@ impl SynthEngine {
             last_pbr: None,
             last_fine_tune: None,
             last_coarse_tune: None,
+            vol_state: [127; 16],
+            pb_range: 2,
         }
     }
 
@@ -93,6 +97,43 @@ impl SynthEngine {
     pub fn update_pb(&mut self, channel: u32, value: f32) {
         if let Some(ch_state) = self.pb_state.get_mut(channel as usize) {
             *ch_state = Some(value);
+        }
+    }
+
+    /// 弯音音量补偿：音高高时自动压低音量，音高低时抬高音量
+    /// 补偿曲线 -3dB/octave，通过修改 Volume(CC7) 实现
+    fn compensated_vol(&self, channel: u32, pb_value: f32) -> Option<u8> {
+        let user_vol = *self.vol_state.get(channel as usize)?;
+        let semitone_shift = pb_value * self.pb_range as f32;
+        // -3dB/octave: compensate_amp = 10^(-3 * semitone_shift / 20 / 12) = 10^(-semitone_shift / 80)
+        let compensate_amp = 10.0f32.powf(-semitone_shift / 80.0);
+        let vol = (user_vol as f32 / 127.0 * compensate_amp).clamp(0.0, 1.0);
+        Some((vol * 127.0) as u8)
+    }
+
+    pub fn apply_pb_volume_comp(&mut self, channel: u32, pb_value: f32) {
+        if let Some(vol_val) = self.compensated_vol(channel, pb_value) {
+            self.core.send_event(SynthEvent::Channel(
+                channel,
+                ChannelEvent::Audio(ChannelAudioEvent::Control(
+                    ControlEvent::Raw(7, vol_val)
+                )),
+            ));
+        }
+    }
+
+    pub fn update_vol_raw_and_compensate(&mut self, channel: u32, value: u8) {
+        if let Some(ch_state) = self.vol_state.get_mut(channel as usize) {
+            *ch_state = value;
+        }
+        let pb = self.pb_state.get(channel as usize).copied().flatten().unwrap_or(0.0);
+        if let Some(vol_val) = self.compensated_vol(channel, pb) {
+            self.core.send_event(SynthEvent::Channel(
+                channel,
+                ChannelEvent::Audio(ChannelAudioEvent::Control(
+                    ControlEvent::Raw(7, vol_val)
+                )),
+            ));
         }
     }
 
@@ -111,10 +152,17 @@ impl SynthEngine {
             if let Some(ch_state) = self.cc_state.get(ch as usize) {
                 for &cc_num in CHASE_CC_LIST {
                     if let Some(value) = ch_state[cc_num as usize] {
+                        let val = if cc_num == 7 {
+                            // Volume: 发送补偿后的值
+                            let pb = self.pb_state.get(ch as usize).copied().flatten().unwrap_or(0.0);
+                            self.compensated_vol(ch, pb).unwrap_or(value)
+                        } else {
+                            value
+                        };
                         self.core.send_event(SynthEvent::Channel(
                             ch,
                             ChannelEvent::Audio(ChannelAudioEvent::Control(
-                                ControlEvent::Raw(cc_num, value)
+                                ControlEvent::Raw(cc_num, val)
                             )),
                         ));
                     }
@@ -232,6 +280,7 @@ impl SynthEngine {
 
     pub fn set_pitch_bend_range_all(&mut self, semitones: u8) {
         self.last_pbr = Some(semitones);
+        self.pb_range = semitones;
         for ch in 0..16u32 {
             self.core.send_event(SynthEvent::Channel(
                 ch,

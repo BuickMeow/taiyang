@@ -36,6 +36,11 @@ pub fn handle_note_event(
             let val = (value * 127.0).clamp(0.0, 127.0) as u8;
             match cc {
                 0 | 32 | 6 | 38 | 98 | 99 | 100 | 101 => {}
+                7 => {
+                    // Volume (CC7): 记录原始值 + 发送补偿后值
+                    engine.update_vol_raw_and_compensate(channel, val);
+                    engine.update_cc(channel, cc, val);
+                }
                 _ => {
                     engine.update_cc(channel, cc, val);
                     engine.send_event(SynthEvent::Channel(channel, ChannelEvent::Audio(
@@ -50,6 +55,7 @@ pub fn handle_note_event(
             engine.send_event(SynthEvent::Channel(channel, ChannelEvent::Audio(
                 ChannelAudioEvent::Control(ControlEvent::PitchBendValue(normalized))
             )));
+            engine.apply_pb_volume_comp(channel, normalized);
         }
         NoteEvent::MidiProgramChange { program, .. } => {
             if !params.preset_locked.value() {
