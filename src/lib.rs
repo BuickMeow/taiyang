@@ -24,6 +24,7 @@ pub struct Taiyang {
     last_bank: u8,
     last_program: u8,
     last_is_drum: bool,
+    was_playing: bool,
 }
 
 struct Pipeline {
@@ -69,6 +70,7 @@ impl Default for Taiyang {
             last_bank: 0,
             last_program: 0,
             last_is_drum: false,
+            was_playing: false,
         }
     }
 }
@@ -156,6 +158,19 @@ impl Plugin for Taiyang {
         let mut engine_guard = self.engine.lock();
 
         if let Some(ref mut engine) = engine_guard.as_mut() {
+            let transport = context.transport();
+            let is_playing = transport.playing;
+
+            // 1. DAW 停止 → 松开踏板 + 停止所有音符
+            if !is_playing && self.was_playing {
+                engine.all_notes_killed();
+            }
+
+            // 2. DAW 开始播放（从停止恢复）→ Reset + Chase
+            if is_playing && !self.was_playing {
+                engine.reset_and_chase();
+            }
+
             let mut has_midi = false;
             let mut has_ch10 = false;
 
@@ -189,6 +204,7 @@ impl Plugin for Taiyang {
                 self.last_is_drum = desired_drum;
             }
 
+            self.was_playing = is_playing;
             self.pipeline.render(buffer, engine, &self.params);
         }
 

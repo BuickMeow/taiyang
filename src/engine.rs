@@ -29,10 +29,29 @@ pub struct SoundfontEntry {
 static GLOBAL_SF_CACHE: LazyLock<RwLock<HashMap<(String, u32), Arc<dyn SoundfontBase>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
+/// 需要 Chase 的 CC 列表（按发送顺序排列，RPN 相关必须先发）
+const CHASE_CC_LIST: &[u8] = &[
+    101, // RPN MSB
+    100, // RPN LSB
+    6,   // Data Entry MSB
+    38,  // Data Entry LSB
+    0,   // Bank Select MSB
+    32,  // Bank Select LSB
+    7,   // Volume
+    10,  // Pan
+    11,  // Expression
+    64,  // Sustain
+    73,  // Attack
+    72,  // Release
+    74,  // Brightness/Cutoff
+    71,  // Resonance
+];
+
 pub struct SynthEngine {
     core: ChannelGroup,
     sample_rate: f32,
     presets: Vec<PresetInfo>,
+    cc_state: [Option<u8>; 128],
 }
 
 impl SynthEngine {
@@ -55,6 +74,39 @@ impl SynthEngine {
             core,
             sample_rate,
             presets: Vec::new(),
+            cc_state: [None; 128],
+        }
+    }
+
+    /// 记录 CC 最新值（用于 Chase）
+    pub fn update_cc(&mut self, cc: u8, value: u8) {
+        self.cc_state[cc as usize] = Some(value);
+    }
+
+    /// 播放开始时：Reset All Controllers + Chase 所有记录的 CC
+    pub fn reset_and_chase(&mut self) {
+        // 1. Kill 所有音符（防止卡音）
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::AllNotesKilled),
+        ));
+
+        // 2. Reset All Controllers
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::ResetControl),
+        ));
+
+        // 3. Chase：按顺序重新发送所有记录过的 CC
+        for &cc_num in CHASE_CC_LIST {
+            if let Some(value) = self.cc_state[cc_num as usize] {
+                self.core.send_event(SynthEvent::Channel(
+                    0,
+                    ChannelEvent::Audio(ChannelAudioEvent::Control(
+                        ControlEvent::Raw(cc_num, value)
+                    )),
+                ));
+            }
         }
     }
 

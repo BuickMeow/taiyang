@@ -38,14 +38,21 @@ pub fn handle_note_event(
         }
         NoteEvent::MidiCC { cc, value, .. } => {
             let val = (value * 127.0).clamp(0.0, 127.0) as u8;
+            engine.update_cc(cc, val);
             engine.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
                 ChannelAudioEvent::Control(ControlEvent::Raw(cc, val))
             )));
         }
         NoteEvent::MidiPitchBend { value, .. } => {
+            // 兼容两种输入：原始 MIDI 值 (0~16383) 或已归一化值 (-1.0~1.0)
+            let normalized = if value > 1.0 || value < -1.0 {
+                (value - 8192.0) / 8192.0
+            } else {
+                value
+            };
             engine.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
                 ChannelAudioEvent::Control(ControlEvent::PitchBendValue(
-                    value.clamp(-1.0, 1.0)
+                    normalized.clamp(-1.0, 1.0)
                 ))
             )));
         }
