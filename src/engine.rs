@@ -33,12 +33,6 @@ static GLOBAL_SF_CACHE: LazyLock<RwLock<HashMap<(String, u32), Arc<dyn Soundfont
 // RPN/Bank Select/音色修改器 由 DAW 或 UI 参数控制，不在此处 Chase
 // Pitch Bend 是 pianoroll 曲线，Chase 固定值没有意义
 const CHASE_CC_LIST: &[u8] = &[
-    101, // RPN MSB
-    100, // RPN LSB
-    6,   // Data Entry MSB
-    38,  // Data Entry LSB
-    0,   // Bank Select MSB
-    32,  // Bank Select LSB
     7,   // Volume
     10,  // Pan
     11,  // Expression
@@ -53,8 +47,8 @@ pub struct SynthEngine {
     core: ChannelGroup,
     sample_rate: f32,
     presets: Vec<PresetInfo>,
-    cc_state: [Option<u8>; 128],
-    pb_state: Option<f32>,
+    cc_state: [[Option<u8>; 128]; 16],
+    pb_state: [Option<f32>; 16],
 }
 
 impl SynthEngine {
@@ -77,19 +71,23 @@ impl SynthEngine {
             core,
             sample_rate,
             presets: Vec::new(),
-            cc_state: [None; 128],
-            pb_state: None,
+            cc_state: [[None; 128]; 16],
+            pb_state: [None; 16],
         }
     }
 
-    /// 记录 CC 最新值（用于 Chase）
-    pub fn update_cc(&mut self, cc: u8, value: u8) {
-        self.cc_state[cc as usize] = Some(value);
+    /// 记录 CC 最新值（按通道，用于 Chase）
+    pub fn update_cc(&mut self, channel: u32, cc: u8, value: u8) {
+        if let Some(ch_state) = self.cc_state.get_mut(channel as usize) {
+            ch_state[cc as usize] = Some(value);
+        }
     }
 
-    /// 记录 Pitch Bend 最新值（用于 Chase）
-    pub fn update_pb(&mut self, value: f32) {
-        self.pb_state = Some(value);
+    /// 记录 Pitch Bend 最新值（按通道，用于 Chase）
+    pub fn update_pb(&mut self, channel: u32, value: f32) {
+        if let Some(ch_state) = self.pb_state.get_mut(channel as usize) {
+            *ch_state = Some(value);
+        }
     }
 
     /// 播放开始时：Kill 所有音符 + Reset All Controllers + Chase 关键 CC
@@ -109,15 +107,17 @@ impl SynthEngine {
                 ChannelEvent::Audio(ChannelAudioEvent::ResetControl),
             ));
 
-            // 3. Chase 关键 CC
-            for &cc_num in CHASE_CC_LIST {
-                if let Some(value) = self.cc_state[cc_num as usize] {
-                    self.core.send_event(SynthEvent::Channel(
-                        ch,
-                        ChannelEvent::Audio(ChannelAudioEvent::Control(
-                            ControlEvent::Raw(cc_num, value)
-                        )),
-                    ));
+            // 3. Chase 关键 CC（按通道）
+            if let Some(ch_state) = self.cc_state.get(ch as usize) {
+                for &cc_num in CHASE_CC_LIST {
+                    if let Some(value) = ch_state[cc_num as usize] {
+                        self.core.send_event(SynthEvent::Channel(
+                            ch,
+                            ChannelEvent::Audio(ChannelAudioEvent::Control(
+                                ControlEvent::Raw(cc_num, value)
+                            )),
+                        ));
+                    }
                 }
             }
         }

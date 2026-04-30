@@ -34,14 +34,14 @@ pub fn handle_note_event(
         }
         NoteEvent::MidiCC { cc, value, .. } => {
             let val = (value * 127.0).clamp(0.0, 127.0) as u8;
-            engine.update_cc(cc, val);
+            engine.update_cc(channel, cc, val);
             engine.send_event(SynthEvent::Channel(channel, ChannelEvent::Audio(
                 ChannelAudioEvent::Control(ControlEvent::Raw(cc, val))
             )));
         }
         NoteEvent::MidiPitchBend { value, .. } => {
             let normalized = (value - 0.5) * 2.0;
-            engine.update_pb(normalized);
+            engine.update_pb(channel, normalized);
             engine.send_event(SynthEvent::Channel(channel, ChannelEvent::Audio(
                 ChannelAudioEvent::Control(ControlEvent::PitchBendValue(normalized))
             )));
