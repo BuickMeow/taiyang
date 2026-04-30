@@ -133,26 +133,26 @@ impl Plugin for Taiyang {
         }
 
         let is_drum = self.params.is_drum.value();
-        engine.set_percussion_mode(is_drum);
+        engine.set_percussion_mode_all(is_drum);
         self.last_is_drum = is_drum;
 
         let bank = self.params.selected_bank.value() as u8;
         let program = self.params.selected_program.value() as u8;
-        engine.send_preset(bank, program);
+        engine.send_preset_all(bank, program);
         self.last_bank = bank;
         self.last_program = program;
 
         // 初始化 RPN 参数
         let pbr = self.params.pitch_bend_range.value();
-        engine.set_pitch_bend_range(pbr as u8);
+        engine.set_pitch_bend_range_all(pbr as u8);
         self.last_pbr = pbr;
 
         let fine = self.params.master_fine_tune.value();
-        engine.set_fine_tune(fine);
+        engine.set_fine_tune_all(fine);
         self.last_fine_tune = fine;
 
         let coarse = self.params.master_coarse_tune.value();
-        engine.set_coarse_tune(coarse);
+        engine.set_coarse_tune_all(coarse);
         self.last_coarse_tune = coarse;
 
         *self.engine.lock() = Some(engine);
@@ -200,55 +200,40 @@ impl Plugin for Taiyang {
                 }
             }
 
-            let mut has_midi = false;
-            let mut has_ch10 = false;
-
             while let Some(event) = context.next_event() {
-                has_midi = true;
-                if midi::is_channel_10(&event) {
-                    has_ch10 = true;
-                }
                 midi::handle_note_event(event, engine, &self.params);
             }
 
             let current_bank = self.params.selected_bank.value() as u8;
             let current_program = self.params.selected_program.value() as u8;
             if current_bank != self.last_bank || current_program != self.last_program {
-                engine.send_preset(current_bank, current_program);
+                engine.send_preset_all(current_bank, current_program);
                 self.last_bank = current_bank;
                 self.last_program = current_program;
             }
 
-            let force_drum = self.params.is_drum.value();
-            let desired_drum = if force_drum {
-                true
-            } else if has_midi {
-                has_ch10
-            } else {
-                self.last_is_drum
-            };
-
-            if desired_drum != self.last_is_drum {
-                engine.set_percussion_mode(desired_drum);
-                self.last_is_drum = desired_drum;
+            let current_is_drum = self.params.is_drum.value();
+            if current_is_drum != self.last_is_drum {
+                engine.set_percussion_mode_all(current_is_drum);
+                self.last_is_drum = current_is_drum;
             }
 
             // RPN 参数变化检测
             let current_pbr = self.params.pitch_bend_range.value();
             if current_pbr != self.last_pbr {
-                engine.set_pitch_bend_range(current_pbr as u8);
+                engine.set_pitch_bend_range_all(current_pbr as u8);
                 self.last_pbr = current_pbr;
             }
 
             let current_fine = self.params.master_fine_tune.value();
             if current_fine != self.last_fine_tune {
-                engine.set_fine_tune(current_fine);
+                engine.set_fine_tune_all(current_fine);
                 self.last_fine_tune = current_fine;
             }
 
             let current_coarse = self.params.master_coarse_tune.value();
             if current_coarse != self.last_coarse_tune {
-                engine.set_coarse_tune(current_coarse);
+                engine.set_coarse_tune_all(current_coarse);
                 self.last_coarse_tune = current_coarse;
             }
 
