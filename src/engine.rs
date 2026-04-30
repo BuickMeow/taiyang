@@ -200,28 +200,71 @@ impl SynthEngine {
         self.core.send_event(event);
     }
 
-    pub fn send_rpn(&mut self, rpn: u16, value: u16) {
-        let rpn_msb = ((rpn >> 7) & 0x7F) as u8;
-        let rpn_lsb = (rpn & 0x7F) as u8;
-        let data_msb = ((value >> 7) & 0x7F) as u8;
-        let data_lsb = (value & 0x7F) as u8;
+    pub fn set_pitch_bend_range(&mut self, semitones: u8) {
+        // RPN 0x0000: Pitch Bend Range
+        // XSynth: pitch_bend_sensitivity = MSB + LSB/100.0
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(101, 0)))),
+        );
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(100, 0)))),
+        );
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(6, semitones)))),
+        );
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(38, 0)))),
+        );
+    }
 
+    pub fn set_fine_tune(&mut self, cents: i32) {
+        // RPN 0x0001: Fine Tune
+        // XSynth: val = MSB<<6 + LSB, (val - 4096) / 4096 * 100
+        let val = (cents + 4096) as u16;
+        let msb = (val >> 6) as u8;
+        let lsb = (val & 0x3F) as u8;
         self.core.send_event(SynthEvent::Channel(
             0,
-            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(101, rpn_msb))),
-        ));
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(101, 0)))),
+        );
         self.core.send_event(SynthEvent::Channel(
             0,
-            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(100, rpn_lsb))),
-        ));
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(100, 1)))),
+        );
         self.core.send_event(SynthEvent::Channel(
             0,
-            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(6, data_msb))),
-        ));
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(6, msb)))),
+        );
         self.core.send_event(SynthEvent::Channel(
             0,
-            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(38, data_lsb))),
-        ));
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(38, lsb)))),
+        );
+    }
+
+    pub fn set_coarse_tune(&mut self, semitones: i32) {
+        // RPN 0x0002: Coarse Tune
+        // XSynth: coarse_tune = value - 64.0
+        let value = (semitones + 64) as u8;
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(101, 0)))),
+        );
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(100, 2)))),
+        );
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(6, value)))),
+        );
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(ControlEvent::Raw(38, 0)))),
+        );
     }
 
     pub fn send_preset(&mut self, bank: u8, program: u8) {

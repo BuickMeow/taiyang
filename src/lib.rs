@@ -144,15 +144,15 @@ impl Plugin for Taiyang {
 
         // 初始化 RPN 参数
         let pbr = self.params.pitch_bend_range.value();
-        engine.send_rpn(0x0000, pbr as u16);
+        engine.set_pitch_bend_range(pbr as u8);
         self.last_pbr = pbr;
 
         let fine = self.params.master_fine_tune.value();
-        engine.send_rpn(0x0001, (fine + 8192) as u16);
+        engine.set_fine_tune(fine);
         self.last_fine_tune = fine;
 
         let coarse = self.params.master_coarse_tune.value();
-        engine.send_rpn(0x0002, (coarse + 64) as u16);
+        engine.set_coarse_tune(coarse);
         self.last_coarse_tune = coarse;
 
         *self.engine.lock() = Some(engine);
@@ -236,19 +236,19 @@ impl Plugin for Taiyang {
             // RPN 参数变化检测
             let current_pbr = self.params.pitch_bend_range.value();
             if current_pbr != self.last_pbr {
-                engine.send_rpn(0x0000, current_pbr as u16);
+                engine.set_pitch_bend_range(current_pbr as u8);
                 self.last_pbr = current_pbr;
             }
 
             let current_fine = self.params.master_fine_tune.value();
             if current_fine != self.last_fine_tune {
-                engine.send_rpn(0x0001, (current_fine + 8192) as u16);
+                engine.set_fine_tune(current_fine);
                 self.last_fine_tune = current_fine;
             }
 
             let current_coarse = self.params.master_coarse_tune.value();
             if current_coarse != self.last_coarse_tune {
-                engine.send_rpn(0x0002, (current_coarse + 64) as u16);
+                engine.set_coarse_tune(current_coarse);
                 self.last_coarse_tune = current_coarse;
             }
 
