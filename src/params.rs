@@ -4,7 +4,7 @@ use std::sync::Arc;
 use parking_lot::Mutex;
 
 #[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct SoundfontEntryData {
+pub struct SoundfontEntry {
     pub path: String,
     pub name: String,
     pub enabled: bool,
@@ -16,7 +16,7 @@ pub struct TaiyangParams {
     pub editor_state: Arc<EguiState>,
 
     #[persist = "soundfont_entries"]
-    pub soundfont_entries: Arc<Mutex<Vec<SoundfontEntryData>>>,
+    pub soundfont_entries: Arc<Mutex<Vec<SoundfontEntry>>>,
 
     #[id = "gain"]
     pub gain: FloatParam,

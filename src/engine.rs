@@ -17,15 +17,9 @@ pub struct PresetInfo {
     pub source_file: String,
 }
 
-#[derive(Clone, Debug)]
-pub struct SoundfontEntry {
-    pub path: String,
-    pub name: String,
-    pub enabled: bool,
-}
+use crate::params::SoundfontEntry;
 
 /// 全局音色库缓存，所有 Taiyang 实例共享
-/// Key: (文件路径, 采样率) —— Soundfont 与采样率绑定，不同采样率不能复用
 static GLOBAL_SF_CACHE: LazyLock<RwLock<HashMap<(String, u32), Arc<dyn SoundfontBase>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
