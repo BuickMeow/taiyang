@@ -131,29 +131,29 @@ impl SynthEngine {
         ));
     }
 
-    pub fn set_pitch_bend_range(&mut self, semitones: u8) {
+    pub fn set_pitch_bend_range(&mut self, semitones: f32) {
         self.core.send_event(SynthEvent::Channel(
             0,
             ChannelEvent::Audio(ChannelAudioEvent::Control(
-                ControlEvent::PitchBendSensitivity(semitones as f32)
+                ControlEvent::PitchBendSensitivity(semitones)
             )),
         ));
     }
 
-    pub fn set_fine_tune(&mut self, cents: i32) {
+    pub fn set_fine_tune(&mut self, cents: f32) {
         self.core.send_event(SynthEvent::Channel(
             0,
             ChannelEvent::Audio(ChannelAudioEvent::Control(
-                ControlEvent::FineTune(cents as f32)
+                ControlEvent::FineTune(cents)
             )),
         ));
     }
 
-    pub fn set_coarse_tune(&mut self, semitones: i32) {
+    pub fn set_coarse_tune(&mut self, semitones: f32) {
         self.core.send_event(SynthEvent::Channel(
             0,
             ChannelEvent::Audio(ChannelAudioEvent::Control(
-                ControlEvent::CoarseTune(semitones as f32)
+                ControlEvent::CoarseTune(semitones)
             )),
         ));
     }

@@ -34,13 +34,13 @@ pub struct TaiyangParams {
     pub selected_program: IntParam,
 
     #[id = "pitch_bend_range"]
-    pub pitch_bend_range: IntParam,
+    pub pitch_bend_range: FloatParam,
 
     #[id = "master_fine_tune"]
-    pub master_fine_tune: IntParam,
+    pub master_fine_tune: FloatParam,
 
     #[id = "master_coarse_tune"]
-    pub master_coarse_tune: IntParam,
+    pub master_coarse_tune: FloatParam,
 }
 
 impl Default for TaiyangParams {
@@ -67,20 +67,20 @@ impl Default for TaiyangParams {
                 0,
                 IntRange::Linear { min: 0, max: 127 },
             ),
-            pitch_bend_range: IntParam::new(
+            pitch_bend_range: FloatParam::new(
                 "Pitch Bend Range",
-                2,
-                IntRange::Linear { min: 0, max: 127 },
+                2.0,
+                FloatRange::Linear { min: 0.0, max: 127.0 },
             ),
-            master_fine_tune: IntParam::new(
+            master_fine_tune: FloatParam::new(
                 "Fine Tune",
-                0,
-                IntRange::Linear { min: -100, max: 100 },
+                0.0,
+                FloatRange::Linear { min: -100.0, max: 100.0 },
             ),
-            master_coarse_tune: IntParam::new(
+            master_coarse_tune: FloatParam::new(
                 "Coarse Tune",
-                0,
-                IntRange::Linear { min: -64, max: 63 },
+                0.0,
+                FloatRange::Linear { min: -64.0, max: 63.0 },
             ),
         }
     }

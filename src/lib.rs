@@ -24,9 +24,9 @@ pub struct Taiyang {
     last_bank: u8,
     last_program: u8,
     last_is_drum: bool,
-    last_pbr: i32,
-    last_fine_tune: i32,
-    last_coarse_tune: i32,
+    last_pbr: f32,
+    last_fine_tune: f32,
+    last_coarse_tune: f32,
 }
 
 struct Pipeline {
@@ -72,9 +72,9 @@ impl Default for Taiyang {
             last_bank: 0,
             last_program: 0,
             last_is_drum: false,
-            last_pbr: -1,
-            last_fine_tune: -101,
-            last_coarse_tune: -65,
+            last_pbr: -1.0,
+            last_fine_tune: f32::NAN,
+            last_coarse_tune: f32::NAN,
         }
     }
 }
@@ -140,7 +140,7 @@ impl Plugin for Taiyang {
 
         // 初始化 RPN 参数
         let pbr = self.params.pitch_bend_range.value();
-        engine.set_pitch_bend_range(pbr as u8);
+        engine.set_pitch_bend_range(pbr);
         self.last_pbr = pbr;
 
         let fine = self.params.master_fine_tune.value();
@@ -195,7 +195,7 @@ impl Plugin for Taiyang {
             // RPN 参数变化检测
             let current_pbr = self.params.pitch_bend_range.value();
             if current_pbr != self.last_pbr {
-                engine.set_pitch_bend_range(current_pbr as u8);
+                engine.set_pitch_bend_range(current_pbr);
                 self.last_pbr = current_pbr;
             }
 

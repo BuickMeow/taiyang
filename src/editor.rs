@@ -60,21 +60,21 @@ fn draw_params(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorState) {
         ui.separator();
 
         ui.label("PBR:");
-        let mut pbr = state.params.pitch_bend_range.value() as i32;
-        if ui.add(egui::DragValue::new(&mut pbr).range(0..=24)).changed() {
+        let mut pbr = state.params.pitch_bend_range.value();
+        if ui.add(egui::DragValue::new(&mut pbr).range(0.0..=24.0)).changed() {
             setter.set_parameter(&state.params.pitch_bend_range, pbr);
         }
 
         ui.separator();
 
         ui.label("Tune:");
-        let mut coarse = state.params.master_coarse_tune.value() as i32;
-        if ui.add(egui::DragValue::new(&mut coarse).range(-64..=63)).changed() {
+        let mut coarse = state.params.master_coarse_tune.value();
+        if ui.add(egui::DragValue::new(&mut coarse).range(-64.0..=63.0)).changed() {
             setter.set_parameter(&state.params.master_coarse_tune, coarse);
         }
         ui.label(".");
-        let mut fine = state.params.master_fine_tune.value() as i32;
-        if ui.add(egui::DragValue::new(&mut fine).range(-100..=100)).changed() {
+        let mut fine = state.params.master_fine_tune.value();
+        if ui.add(egui::DragValue::new(&mut fine).range(-100.0..=100.0)).changed() {
             setter.set_parameter(&state.params.master_fine_tune, fine);
         }
 
