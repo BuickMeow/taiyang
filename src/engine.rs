@@ -33,9 +33,6 @@ pub struct SynthEngine {
     core: ChannelGroup,
     sample_rate: f32,
     presets: Vec<PresetInfo>,
-    last_pbr: Option<u8>,
-    last_fine_tune: Option<i32>,
-    last_coarse_tune: Option<i32>,
 }
 
 impl SynthEngine {
@@ -58,38 +55,11 @@ impl SynthEngine {
             core,
             sample_rate,
             presets: Vec::new(),
-            last_pbr: None,
-            last_fine_tune: None,
-            last_coarse_tune: None,
         }
     }
 
-    pub fn reset_and_chase(&mut self) {
-        self.core.send_event(SynthEvent::Channel(
-            0,
-            ChannelEvent::Audio(ChannelAudioEvent::AllNotesKilled),
-        ));
-
-        self.core.send_event(SynthEvent::Channel(
-            0,
-            ChannelEvent::Audio(ChannelAudioEvent::ResetControl),
-        ));
-
-        if let Some(pbr) = self.last_pbr {
-            self.core.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
-                ChannelAudioEvent::Control(ControlEvent::PitchBendSensitivity(pbr as f32))
-            )));
-        }
-        if let Some(fine) = self.last_fine_tune {
-            self.core.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
-                ChannelAudioEvent::Control(ControlEvent::FineTune(fine as f32))
-            )));
-        }
-        if let Some(coarse) = self.last_coarse_tune {
-            self.core.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
-                ChannelAudioEvent::Control(ControlEvent::CoarseTune(coarse as f32))
-            )));
-        }
+    pub fn send_event(&mut self, event: SynthEvent) {
+        self.core.send_event(event);
     }
 
     pub fn load_soundfonts(&mut self, entries: &[SoundfontEntry]) -> Result<(), String> {
@@ -161,12 +131,7 @@ impl SynthEngine {
         ));
     }
 
-    pub fn send_event(&mut self, event: SynthEvent) {
-        self.core.send_event(event);
-    }
-
     pub fn set_pitch_bend_range(&mut self, semitones: u8) {
-        self.last_pbr = Some(semitones);
         self.core.send_event(SynthEvent::Channel(
             0,
             ChannelEvent::Audio(ChannelAudioEvent::Control(
@@ -176,7 +141,6 @@ impl SynthEngine {
     }
 
     pub fn set_fine_tune(&mut self, cents: i32) {
-        self.last_fine_tune = Some(cents);
         self.core.send_event(SynthEvent::Channel(
             0,
             ChannelEvent::Audio(ChannelAudioEvent::Control(
@@ -186,7 +150,6 @@ impl SynthEngine {
     }
 
     pub fn set_coarse_tune(&mut self, semitones: i32) {
-        self.last_coarse_tune = Some(semitones);
         self.core.send_event(SynthEvent::Channel(
             0,
             ChannelEvent::Audio(ChannelAudioEvent::Control(
@@ -205,13 +168,6 @@ impl SynthEngine {
         self.core.send_event(SynthEvent::Channel(
             0,
             ChannelEvent::Audio(ChannelAudioEvent::ProgramChange(program)),
-        ));
-    }
-
-    pub fn all_notes_off(&mut self) {
-        self.core.send_event(SynthEvent::Channel(
-            0,
-            ChannelEvent::Audio(ChannelAudioEvent::AllNotesOff),
         ));
     }
 

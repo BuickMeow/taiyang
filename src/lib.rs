@@ -24,8 +24,6 @@ pub struct Taiyang {
     last_bank: u8,
     last_program: u8,
     last_is_drum: bool,
-    was_playing: bool,
-    last_pos_beats: f64,
     last_pbr: i32,
     last_fine_tune: i32,
     last_coarse_tune: i32,
@@ -74,8 +72,6 @@ impl Default for Taiyang {
             last_bank: 0,
             last_program: 0,
             last_is_drum: false,
-            was_playing: false,
-            last_pos_beats: -1.0,
             last_pbr: -1,
             last_fine_tune: -101,
             last_coarse_tune: -65,
@@ -178,28 +174,6 @@ impl Plugin for Taiyang {
         let mut engine_guard = self.engine.lock();
 
         if let Some(ref mut engine) = engine_guard.as_mut() {
-            let transport = context.transport();
-            let is_playing = transport.playing;
-            let pos_beats = transport.pos_beats().unwrap_or(0.0);
-
-            // 1. DAW 停止 → Kill 所有音符
-            if !is_playing && self.was_playing {
-                engine.all_notes_killed();
-            }
-
-            // 2. DAW 开始播放（从停止恢复）→ Reset + Chase
-            if is_playing && !self.was_playing {
-                engine.reset_and_chase();
-            }
-
-            // 3. 播放中跳转播放头 → Reset + Chase
-            if is_playing && self.was_playing {
-                let delta = (pos_beats - self.last_pos_beats).abs();
-                if delta > 1.0 {
-                    engine.reset_and_chase();
-                }
-            }
-
             while let Some(event) = context.next_event() {
                 midi::handle_note_event(event, engine, &self.params);
             }
@@ -237,8 +211,6 @@ impl Plugin for Taiyang {
                 self.last_coarse_tune = current_coarse;
             }
 
-            self.was_playing = is_playing;
-            self.last_pos_beats = pos_beats;
             self.pipeline.render(buffer, engine, &self.params);
         }
 
