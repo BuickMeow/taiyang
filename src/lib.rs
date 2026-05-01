@@ -10,13 +10,6 @@ mod editor;
 use engine::SynthEngine;
 use params::TaiyangParams;
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct SoundfontEntry {
-    pub path: String,
-    pub name: String,
-    pub enabled: bool,
-}
-
 pub struct Taiyang {
     params: Arc<TaiyangParams>,
     engine: Arc<Mutex<Option<SynthEngine>>>,
