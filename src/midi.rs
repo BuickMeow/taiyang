@@ -25,7 +25,6 @@ pub fn handle_note_event(
             match cc {
                 0 | 32 | 6 | 38 | 98 | 99 | 100 | 101 => {}
                 _ => {
-                    engine.update_cc(cc, val);
                     engine.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
                         ChannelAudioEvent::Control(ControlEvent::Raw(cc, val))
                     )));
@@ -34,7 +33,6 @@ pub fn handle_note_event(
         }
         nih_plug::prelude::NoteEvent::MidiPitchBend { value, .. } => {
             let normalized = (value - 0.5) * 2.0;
-            engine.update_pb(normalized);
             engine.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
                 ChannelAudioEvent::Control(ControlEvent::PitchBendValue(normalized))
             )));
