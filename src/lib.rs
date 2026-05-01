@@ -10,7 +10,12 @@ mod editor;
 use engine::SynthEngine;
 use params::TaiyangParams;
 
-pub use params::SoundfontEntry;
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
+pub struct SoundfontEntry {
+    pub path: String,
+    pub name: String,
+    pub enabled: bool,
+}
 
 pub struct Taiyang {
     params: Arc<TaiyangParams>,
@@ -110,10 +115,16 @@ impl Plugin for Taiyang {
 
         let entries = self.params.soundfont_entries.lock().clone();
         if !entries.is_empty() {
-            if let Err(e) = engine.load_soundfonts(&entries) {
+            let sf_entries: Vec<engine::SoundfontEntry> = entries.iter().map(|e| engine::SoundfontEntry {
+                path: e.path.clone(),
+                name: e.name.clone(),
+                enabled: e.enabled,
+            }).collect();
+
+            if let Err(e) = engine.load_soundfonts(&sf_entries) {
                 nih_log!("Soundfont loading failed: {}", e);
             } else {
-                nih_log!("Loaded {} soundfonts", entries.len());
+                nih_log!("Loaded {} soundfonts", sf_entries.len());
             }
         }
 
