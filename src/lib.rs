@@ -175,7 +175,7 @@ impl Plugin for Taiyang {
 
         if let Some(ref mut engine) = engine_guard.as_mut() {
             while let Some(event) = context.next_event() {
-                midi::handle_note_event(event, engine, &self.params);
+                midi::handle_note_event(event, engine, self.params.preset_locked.value());
             }
 
             let current_bank = self.params.selected_bank.value() as u8;

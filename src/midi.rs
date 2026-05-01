@@ -1,12 +1,11 @@
 use xsynth_core::channel::{ChannelAudioEvent, ChannelEvent, ControlEvent};
 use xsynth_core::channel_group::SynthEvent;
 use crate::engine::SynthEngine;
-use crate::params::TaiyangParams;
 
 pub fn handle_note_event(
     event: nih_plug::prelude::NoteEvent<()>,
     engine: &mut SynthEngine,
-    params: &TaiyangParams,
+    preset_locked: bool,
 ) {
     match event {
         nih_plug::prelude::NoteEvent::NoteOn { note, velocity, .. } => {
@@ -33,7 +32,7 @@ pub fn handle_note_event(
             )));
         }
         nih_plug::prelude::NoteEvent::MidiProgramChange { program, .. } => {
-            if !params.preset_locked.value() {
+            if !preset_locked {
                 engine.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
                     ChannelAudioEvent::ProgramChange(program)
                 )));
