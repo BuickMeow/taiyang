@@ -1890,6 +1890,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b50b8869d9fc858ce7266cce0194bd74df58b9d0e3f6df3a9fc8eb470d95c09d"
 
 [[package]]
+name = "rustc-hash"
+version = "2.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94300abf3f1ae2e2b8ffb7b58043de3d399c73fa6f4b73826402a5c457614dbe"
+
+[[package]]
 name = "rustc_version"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2261,7 +2267,6 @@ dependencies = [
  "parking_lot",
  "rfd",
  "serde",
- "soundfont",
  "xsynth-core",
  "xsynth-soundfonts",
 ]
@@ -2980,8 +2985,7 @@ checksum = "b9cc00251562a284751c9973bace760d86c0276c471b4be569fe6b068ee97a56"
 [[package]]
 name = "xsynth-core"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dba7af545df823e7813bf8b78d9e0578444cd7aedec6bbc7f0281308d6aac01"
+source = "git+https://github.com/BuickMeow/xsynth.git?branch=0.4.0#2dc5dd91263ae1a5e75e13aaec8c45ae3c8d3df6"
 dependencies = [
  "atomic_refcell",
  "biquad",
@@ -2990,6 +2994,7 @@ dependencies = [
  "lazy_static",
  "proc-macro2",
  "rayon",
+ "rustc-hash",
  "simdeez",
  "spin_sleep",
  "symphonia",
@@ -3001,12 +3006,12 @@ dependencies = [
 [[package]]
 name = "xsynth-soundfonts"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24f08d93774a60ec88ecf416295d1303d2df286667111625e9fe90760ff04f14"
+source = "git+https://github.com/BuickMeow/xsynth.git?branch=0.4.0#2dc5dd91263ae1a5e75e13aaec8c45ae3c8d3df6"
 dependencies = [
  "encoding_rs",
  "encoding_rs_io",
  "lazy-regex",
+ "rayon",
  "regex-bnf",
  "rubato",
  "simdeez",
