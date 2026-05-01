@@ -17,7 +17,7 @@ pub struct PresetInfo {
     pub source_file: String,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
 pub struct SoundfontEntry {
     pub path: String,
     pub name: String,

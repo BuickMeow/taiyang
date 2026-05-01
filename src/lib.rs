@@ -108,16 +108,10 @@ impl Plugin for Taiyang {
 
         let entries = self.params.soundfont_entries.lock().clone();
         if !entries.is_empty() {
-            let sf_entries: Vec<engine::SoundfontEntry> = entries.iter().map(|e| engine::SoundfontEntry {
-                path: e.path.clone(),
-                name: e.name.clone(),
-                enabled: e.enabled,
-            }).collect();
-
-            if let Err(e) = engine.load_soundfonts(&sf_entries) {
+            if let Err(e) = engine.load_soundfonts(&entries) {
                 nih_log!("Soundfont loading failed: {}", e);
             } else {
-                nih_log!("Loaded {} soundfonts", sf_entries.len());
+                nih_log!("Loaded {} soundfonts", entries.len());
             }
         }
 

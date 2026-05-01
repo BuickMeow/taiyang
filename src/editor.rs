@@ -144,7 +144,7 @@ fn spawn_add_soundfont_dialog(state: &EditorState) {
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| "Unknown".to_string());
 
-                let entry = crate::params::SoundfontEntryData {
+                let entry = crate::engine::SoundfontEntry {
                     path: path_str,
                     name,
                     enabled: true,
@@ -170,14 +170,7 @@ fn reload_soundfonts_from_state(
     engine: &Arc<Mutex<Option<crate::engine::SynthEngine>>>,
 ) {
     if let Some(ref mut eng) = engine.lock().as_mut() {
-        let entries: Vec<crate::engine::SoundfontEntry> = params.soundfont_entries.lock()
-            .iter()
-            .map(|e| crate::engine::SoundfontEntry {
-                path: e.path.clone(),
-                name: e.name.clone(),
-                enabled: e.enabled,
-            })
-            .collect();
+        let entries = params.soundfont_entries.lock().clone();
 
         if let Err(e) = eng.load_soundfonts(&entries) {
             nih_log!("Failed to reload soundfonts: {}", e);

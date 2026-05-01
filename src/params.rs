@@ -3,20 +3,13 @@ use nih_plug_egui::EguiState;
 use std::sync::Arc;
 use parking_lot::Mutex;
 
-#[derive(Clone, Debug, Default, serde::Serialize, serde::Deserialize)]
-pub struct SoundfontEntryData {
-    pub path: String,
-    pub name: String,
-    pub enabled: bool,
-}
-
 #[derive(Params)]
 pub struct TaiyangParams {
     #[persist = "editor_state"]
     pub editor_state: Arc<EguiState>,
 
     #[persist = "soundfont_entries"]
-    pub soundfont_entries: Arc<Mutex<Vec<SoundfontEntryData>>>,
+    pub soundfont_entries: Arc<Mutex<Vec<crate::engine::SoundfontEntry>>>,
 
     #[id = "gain"]
     pub gain: FloatParam,
