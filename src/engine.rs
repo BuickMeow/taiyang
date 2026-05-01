@@ -29,9 +29,6 @@ pub struct SoundfontEntry {
 static GLOBAL_SF_CACHE: LazyLock<RwLock<HashMap<(String, u32), Arc<dyn SoundfontBase>>>> =
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
-// 只 Chase 最关键的 CC，避免和 DAW 自己的 Chase 冲突导致声音不稳定
-// RPN/Bank Select/音色修改器 由 DAW 或 UI 参数控制，不在此处 Chase
-// Pitch Bend 是 pianoroll 曲线，Chase 固定值没有意义
 const CHASE_CC_LIST: &[u8] = &[
     7,   // Volume
     10,  // Pan
@@ -47,13 +44,11 @@ pub struct SynthEngine {
     core: ChannelGroup,
     sample_rate: f32,
     presets: Vec<PresetInfo>,
-    cc_state: [[Option<u8>; 128]; 16],
-    pb_state: [Option<f32>; 16],
+    cc_state: [Option<u8>; 128],
+    pb_state: Option<f32>,
     last_pbr: Option<u8>,
     last_fine_tune: Option<i32>,
     last_coarse_tune: Option<i32>,
-    vol_state: [u8; 16],
-    pb_range: u8,
 }
 
 impl SynthEngine {
@@ -65,7 +60,7 @@ impl SynthEngine {
 
         let config = ChannelGroupConfig {
             channel_init_options: ChannelInitOptions { fade_out_killing: true },
-            format: SynthFormat::Midi,
+            format: SynthFormat::Custom { channels: 1 },
             audio_params,
             parallelism: ParallelismOptions::AUTO_PER_CHANNEL,
         };
@@ -76,121 +71,60 @@ impl SynthEngine {
             core,
             sample_rate,
             presets: Vec::new(),
-            cc_state: [[None; 128]; 16],
-            pb_state: [None; 16],
+            cc_state: [None; 128],
+            pb_state: None,
             last_pbr: None,
             last_fine_tune: None,
             last_coarse_tune: None,
-            vol_state: [127; 16],
-            pb_range: 2,
         }
     }
 
-    /// 记录 CC 最新值（按通道，用于 Chase）
-    pub fn update_cc(&mut self, channel: u32, cc: u8, value: u8) {
-        if let Some(ch_state) = self.cc_state.get_mut(channel as usize) {
-            ch_state[cc as usize] = Some(value);
-        }
+    /// 记录 CC 最新值（用于 Chase）
+    pub fn update_cc(&mut self, cc: u8, value: u8) {
+        self.cc_state[cc as usize] = Some(value);
     }
 
-    /// 记录 Pitch Bend 最新值（按通道，用于 Chase）
-    pub fn update_pb(&mut self, channel: u32, value: f32) {
-        if let Some(ch_state) = self.pb_state.get_mut(channel as usize) {
-            *ch_state = Some(value);
-        }
-    }
-
-    /// 弯音音量补偿：音高高时自动压低音量，音高低时抬高音量
-    /// 补偿曲线 -3dB/octave，通过修改 Volume(CC7) 实现
-    fn compensated_vol(&self, channel: u32, pb_value: f32) -> Option<u8> {
-        let user_vol = *self.vol_state.get(channel as usize)?;
-        let semitone_shift = pb_value * self.pb_range as f32;
-        // -3dB/octave: compensate_amp = 10^(-3 * semitone_shift / 20 / 12) = 10^(-semitone_shift / 80)
-        let compensate_amp = 10.0f32.powf(-semitone_shift / 80.0);
-        let vol = (user_vol as f32 / 127.0 * compensate_amp).clamp(0.0, 1.0);
-        Some((vol * 127.0) as u8)
-    }
-
-    pub fn apply_pb_volume_comp(&mut self, channel: u32, pb_value: f32) {
-        if let Some(vol_val) = self.compensated_vol(channel, pb_value) {
-            self.core.send_event(SynthEvent::Channel(
-                channel,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(
-                    ControlEvent::Raw(7, vol_val)
-                )),
-            ));
-        }
-    }
-
-    pub fn update_vol_raw_and_compensate(&mut self, channel: u32, value: u8) {
-        if let Some(ch_state) = self.vol_state.get_mut(channel as usize) {
-            *ch_state = value;
-        }
-        let pb = self.pb_state.get(channel as usize).copied().flatten().unwrap_or(0.0);
-        if let Some(vol_val) = self.compensated_vol(channel, pb) {
-            self.core.send_event(SynthEvent::Channel(
-                channel,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(
-                    ControlEvent::Raw(7, vol_val)
-                )),
-            ));
-        }
+    /// 记录 Pitch Bend 最新值（用于 Chase）
+    pub fn update_pb(&mut self, value: f32) {
+        self.pb_state = Some(value);
     }
 
     pub fn reset_and_chase(&mut self) {
-        for ch in 0..16u32 {
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::AllNotesKilled),
-            ));
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::AllNotesKilled),
+        ));
 
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::ResetControl),
-            ));
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::ResetControl),
+        ));
 
-            if let Some(ch_state) = self.cc_state.get(ch as usize) {
-                for &cc_num in CHASE_CC_LIST {
-                    if let Some(value) = ch_state[cc_num as usize] {
-                        let val = if cc_num == 7 {
-                            // Volume: 发送补偿后的值
-                            let pb = self.pb_state.get(ch as usize).copied().flatten().unwrap_or(0.0);
-                            self.compensated_vol(ch, pb).unwrap_or(value)
-                        } else {
-                            value
-                        };
-                        self.core.send_event(SynthEvent::Channel(
-                            ch,
-                            ChannelEvent::Audio(ChannelAudioEvent::Control(
-                                ControlEvent::Raw(cc_num, val)
-                            )),
-                        ));
-                    }
-                }
+        for &cc_num in CHASE_CC_LIST {
+            if let Some(value) = self.cc_state[cc_num as usize] {
+                self.core.send_event(SynthEvent::Channel(
+                    0,
+                    ChannelEvent::Audio(ChannelAudioEvent::Control(
+                        ControlEvent::Raw(cc_num, value)
+                    )),
+                ));
             }
         }
 
-        // Chase RPN 语义化参数（PBR/Fine/Coarse 走 XSynth 专用事件，不依赖 CC101/100）
         if let Some(pbr) = self.last_pbr {
-            for ch in 0..16u32 {
-                self.core.send_event(SynthEvent::Channel(ch, ChannelEvent::Audio(
-                    ChannelAudioEvent::Control(ControlEvent::PitchBendSensitivity(pbr as f32))
-                )));
-            }
+            self.core.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
+                ChannelAudioEvent::Control(ControlEvent::PitchBendSensitivity(pbr as f32))
+            )));
         }
         if let Some(fine) = self.last_fine_tune {
-            for ch in 0..16u32 {
-                self.core.send_event(SynthEvent::Channel(ch, ChannelEvent::Audio(
-                    ChannelAudioEvent::Control(ControlEvent::FineTune(fine as f32))
-                )));
-            }
+            self.core.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
+                ChannelAudioEvent::Control(ControlEvent::FineTune(fine as f32))
+            )));
         }
         if let Some(coarse) = self.last_coarse_tune {
-            for ch in 0..16u32 {
-                self.core.send_event(SynthEvent::Channel(ch, ChannelEvent::Audio(
-                    ChannelAudioEvent::Control(ControlEvent::CoarseTune(coarse as f32))
-                )));
-            }
+            self.core.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
+                ChannelAudioEvent::Control(ControlEvent::CoarseTune(coarse as f32))
+            )));
         }
     }
 
@@ -242,12 +176,10 @@ impl SynthEngine {
             }
         }
 
-        for ch in 0..16u32 {
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Config(ChannelConfigEvent::SetSoundfonts(soundfonts.clone()))
-            ));
-        }
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Config(ChannelConfigEvent::SetSoundfonts(soundfonts))
+        ));
 
         all_presets.sort_by(|a, b| {
             a.bank.cmp(&b.bank)
@@ -258,96 +190,72 @@ impl SynthEngine {
         Ok(())
     }
 
-    pub fn set_percussion_mode(&mut self, ch: u32, percussion: bool) {
+    pub fn set_percussion_mode(&mut self, percussion: bool) {
         self.core.send_event(SynthEvent::Channel(
-            ch,
+            0,
             ChannelEvent::Config(ChannelConfigEvent::SetPercussionMode(percussion)),
         ));
-    }
-
-    pub fn set_percussion_mode_all(&mut self, percussion: bool) {
-        for ch in 0..16u32 {
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Config(ChannelConfigEvent::SetPercussionMode(percussion)),
-            ));
-        }
     }
 
     pub fn send_event(&mut self, event: SynthEvent) {
         self.core.send_event(event);
     }
 
-    pub fn set_pitch_bend_range_all(&mut self, semitones: u8) {
+    pub fn set_pitch_bend_range(&mut self, semitones: u8) {
         self.last_pbr = Some(semitones);
-        self.pb_range = semitones;
-        for ch in 0..16u32 {
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(
-                    ControlEvent::PitchBendSensitivity(semitones as f32)
-                )),
-            ));
-        }
-    }
-
-    pub fn set_fine_tune_all(&mut self, cents: i32) {
-        self.last_fine_tune = Some(cents);
-        for ch in 0..16u32 {
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(
-                    ControlEvent::FineTune(cents as f32)
-                )),
-            ));
-        }
-    }
-
-    pub fn set_coarse_tune_all(&mut self, semitones: i32) {
-        self.last_coarse_tune = Some(semitones);
-        for ch in 0..16u32 {
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::Control(
-                    ControlEvent::CoarseTune(semitones as f32)
-                )),
-            ));
-        }
-    }
-
-    pub fn send_preset(&mut self, ch: u32, bank: u8, program: u8) {
         self.core.send_event(SynthEvent::Channel(
-            ch,
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(
+                ControlEvent::PitchBendSensitivity(semitones as f32)
+            )),
+        ));
+    }
+
+    pub fn set_fine_tune(&mut self, cents: i32) {
+        self.last_fine_tune = Some(cents);
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(
+                ControlEvent::FineTune(cents as f32)
+            )),
+        ));
+    }
+
+    pub fn set_coarse_tune(&mut self, semitones: i32) {
+        self.last_coarse_tune = Some(semitones);
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(
+                ControlEvent::CoarseTune(semitones as f32)
+            )),
+        ));
+    }
+
+    pub fn send_preset(&mut self, bank: u8, program: u8) {
+        self.core.send_event(SynthEvent::Channel(
+            0,
             ChannelEvent::Audio(ChannelAudioEvent::Control(
                 ControlEvent::Raw(0, bank)
             )),
         ));
         self.core.send_event(SynthEvent::Channel(
-            ch,
+            0,
             ChannelEvent::Audio(ChannelAudioEvent::ProgramChange(program)),
         ));
     }
 
-    pub fn send_preset_all(&mut self, bank: u8, program: u8) {
-        for ch in 0..16u32 {
-            self.send_preset(ch, bank, program);
-        }
-    }
-
-    pub fn all_notes_off(&mut self, ch: u32) {
+    pub fn all_notes_off(&mut self) {
         self.core.send_event(SynthEvent::Channel(
-            ch,
+            0,
             ChannelEvent::Audio(ChannelAudioEvent::AllNotesOff),
         ));
     }
 
     pub fn all_notes_killed(&mut self) {
-        for ch in 0..16u32 {
-            self.core.send_event(SynthEvent::Channel(
-                ch,
-                ChannelEvent::Audio(ChannelAudioEvent::AllNotesKilled),
-            ));
-        }
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::AllNotesKilled),
+        ));
     }
 
     pub fn read_samples(&mut self, buffer: &mut [f32]) {

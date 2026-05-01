@@ -226,7 +226,7 @@ fn draw_presets(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorState) {
                 setter.set_parameter(&state.params.selected_program, preset.program as i32);
 
                 if let Some(ref mut eng) = state.engine.lock().as_mut() {
-                    eng.send_preset_all(preset.bank as u8, preset.program as u8);
+                    eng.send_preset(preset.bank as u8, preset.program as u8);
                 }
             }
         }
