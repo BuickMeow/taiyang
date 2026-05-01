@@ -21,15 +21,10 @@ pub fn handle_note_event(
             )));
         }
         nih_plug::prelude::NoteEvent::MidiCC { cc, value, .. } => {
-            let val = (value * 127.0).clamp(0.0, 127.0) as u8;
-            match cc {
-                0 | 32 | 6 | 38 | 98 | 99 | 100 | 101 => {}
-                _ => {
-                    engine.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
-                        ChannelAudioEvent::Control(ControlEvent::Raw(cc, val))
-                    )));
-                }
-            }
+            let val = (value * 127.0).clamp(0.0, 127.0) as u8;         
+            engine.send_event(SynthEvent::Channel(0, ChannelEvent::Audio(
+                ChannelAudioEvent::Control(ControlEvent::Raw(cc, val))
+            )));
         }
         nih_plug::prelude::NoteEvent::MidiPitchBend { value, .. } => {
             let normalized = (value - 0.5) * 2.0;
