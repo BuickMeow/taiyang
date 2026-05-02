@@ -20,6 +20,7 @@ pub struct Taiyang {
     last_pbr: f32,
     last_fine_tune: f32,
     last_coarse_tune: f32,
+    was_playing: bool,
 }
 
 struct Pipeline {
@@ -44,13 +45,15 @@ impl Pipeline {
         engine.read_samples(slice);
         let gain = params.gain.smoothed.next();
 
-        for (i, mut channel_samples) in buffer.iter_samples().enumerate() {
-            let l = self.interleaved[i * 2] * gain;
-            let r = self.interleaved[i * 2 + 1] * gain;
+        // 使用原始切片，避免 iter_samples() 的枚举器开销
+        let output = buffer.as_slice();
+        let (left_out, rest) = output.split_at_mut(1);
+        let left = &mut left_out[0][..num_frames];
+        let right = &mut rest[0][..num_frames];
 
-            let mut iter = channel_samples.iter_mut();
-            *iter.next().unwrap() = l;
-            *iter.next().unwrap() = r;
+        for i in 0..num_frames {
+            left[i] = self.interleaved[i * 2] * gain;
+            right[i] = self.interleaved[i * 2 + 1] * gain;
         }
     }
 }
@@ -67,6 +70,7 @@ impl Default for Taiyang {
             last_pbr: -1.0,
             last_fine_tune: f32::NAN,
             last_coarse_tune: f32::NAN,
+            was_playing: false,
         }
     }
 }
@@ -157,41 +161,59 @@ impl Plugin for Taiyang {
         _aux: &mut AuxiliaryBuffers,
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
-        let mut engine_guard = self.engine.lock();
+        // 0. 读取 DAW 走带状态（锁外）
+        let transport = context.transport();
+        let is_playing = transport.playing;
 
+        // 1. 在锁外收集 MIDI 事件，缩短锁持有时间
+        let mut midi_events = Vec::with_capacity(16);
+        while let Some(event) = context.next_event() {
+            midi_events.push(event);
+        }
+
+        // 2. 在锁外读取参数，避免在 audio thread 锁内做额外工作
+        let preset_locked = self.params.preset_locked.value();
+        let current_bank = self.params.selected_bank.value() as u8;
+        let current_program = self.params.selected_program.value() as u8;
+        let current_is_drum = self.params.is_drum.value();
+        let current_pbr = self.params.pitch_bend_range.value();
+        let current_fine = self.params.master_fine_tune.value();
+        let current_coarse = self.params.master_coarse_tune.value();
+
+        // 3. 短暂持有锁：处理事件 + 渲染
+        let mut engine_guard = self.engine.lock();
         if let Some(ref mut engine) = engine_guard.as_mut() {
-            while let Some(event) = context.next_event() {
-                midi::handle_note_event(event, engine, self.params.preset_locked.value());
+            // 暂停后重新播放：切断残留音频
+            if is_playing && !self.was_playing {
+                engine.all_notes_killed();
+            }
+            self.was_playing = is_playing;
+
+            for event in midi_events {
+                midi::handle_note_event(event, engine, preset_locked);
             }
 
-            let current_bank = self.params.selected_bank.value() as u8;
-            let current_program = self.params.selected_program.value() as u8;
             if current_bank != self.last_bank || current_program != self.last_program {
                 engine.send_preset(current_bank, current_program);
                 self.last_bank = current_bank;
                 self.last_program = current_program;
             }
 
-            let current_is_drum = self.params.is_drum.value();
             if current_is_drum != self.last_is_drum {
                 engine.set_percussion_mode(current_is_drum);
                 self.last_is_drum = current_is_drum;
             }
 
-            // RPN 参数变化检测
-            let current_pbr = self.params.pitch_bend_range.value();
             if current_pbr != self.last_pbr {
                 engine.set_pitch_bend_range(current_pbr);
                 self.last_pbr = current_pbr;
             }
 
-            let current_fine = self.params.master_fine_tune.value();
             if current_fine != self.last_fine_tune {
                 engine.set_fine_tune(current_fine);
                 self.last_fine_tune = current_fine;
             }
 
-            let current_coarse = self.params.master_coarse_tune.value();
             if current_coarse != self.last_coarse_tune {
                 engine.set_coarse_tune(current_coarse);
                 self.last_coarse_tune = current_coarse;
