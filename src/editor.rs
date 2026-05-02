@@ -1,6 +1,6 @@
 use nih_plug::prelude::*;
 use nih_plug::context::gui::ParamSetter;
-use nih_plug_egui::{create_egui_editor, egui};
+use nih_plug_egui::{create_egui_editor, egui, widgets};
 use std::sync::Arc;
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -51,11 +51,7 @@ fn draw_params(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorState) {
         ui.separator();
 
         ui.label("Gain:");
-        let mut gain = state.params.gain.value();
-        let response = ui.add(egui::Slider::new(&mut gain, -30.0..=12.0).text("dB"));
-        if response.changed() {
-            setter.set_parameter(&state.params.gain, gain);
-        }
+        ui.add(widgets::ParamSlider::for_param(&state.params.gain, setter));
 
         ui.separator();
 

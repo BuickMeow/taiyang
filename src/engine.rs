@@ -46,7 +46,7 @@ impl SynthEngine {
             channel_init_options: ChannelInitOptions { fade_out_killing: true },
             format: SynthFormat::Custom { channels: 1 },
             audio_params,
-            parallelism: ParallelismOptions::AUTO_PER_CHANNEL,
+            parallelism: ParallelismOptions::AUTO_PER_KEY,
         };
 
         let core = ChannelGroup::new(config);

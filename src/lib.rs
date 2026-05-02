@@ -42,8 +42,7 @@ impl Pipeline {
         let slice = &mut self.interleaved[..num_frames * 2];
 
         engine.read_samples(slice);
-        let gain_db = params.gain.smoothed.next();
-        let gain = util::db_to_gain(gain_db);
+        let gain = params.gain.smoothed.next();
 
         for (i, mut channel_samples) in buffer.iter_samples().enumerate() {
             let l = self.interleaved[i * 2] * gain;

@@ -43,11 +43,13 @@ impl Default for TaiyangParams {
             soundfont_entries: Arc::new(Mutex::new(Vec::new())),
             gain: FloatParam::new(
                 "Gain",
-                0.0,
-                FloatRange::Linear { min: -30.0, max: 12.0 },
+                1.0,
+                FloatRange::Linear { min: 0.0, max: 2.0 },
             )
-            .with_smoother(SmoothingStyle::Linear(5.0))
-            .with_unit(" dB"),
+            .with_smoother(SmoothingStyle::None)
+            .with_unit(" dB")
+            .with_value_to_string(formatters::v2s_f32_gain_to_db(2))
+            .with_string_to_value(formatters::s2v_f32_gain_to_db()),
             is_drum: BoolParam::new("Drum Mode", false),
             preset_locked: BoolParam::new("Lock Preset", false),
             selected_bank: IntParam::new(
