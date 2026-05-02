@@ -1,8 +1,8 @@
-use xsynth_core::{
-    AudioPipe, AudioStreamParams,
-    channel::{ChannelAudioEvent, ChannelEvent, ChannelConfigEvent, ChannelInitOptions, ControlEvent},
-    channel_group::{ChannelGroup, ChannelGroupConfig, ParallelismOptions, SynthEvent, SynthFormat},
-    soundfont::{SampleSoundfont, SoundfontInitOptions, SoundfontBase},
+use dysonphere_core::{
+    AudioPipe, AudioStreamParams, ChannelCount,
+    event::{ChannelAudioEvent, ChannelEvent, ChannelConfigEvent, ControlEvent, SynthEvent},
+    soundfont::{SampleSoundfont, SoundfontBase},
+    synth::Synthesizer,
 };
 use std::sync::{Arc, LazyLock};
 use std::collections::HashMap;
@@ -30,7 +30,7 @@ static GLOBAL_SF_CACHE: LazyLock<RwLock<HashMap<(String, u32), Arc<dyn Soundfont
     LazyLock::new(|| RwLock::new(HashMap::new()));
 
 pub struct SynthEngine {
-    core: ChannelGroup,
+    core: Synthesizer,
     sample_rate: f32,
     presets: Vec<PresetInfo>,
 }
@@ -39,17 +39,10 @@ impl SynthEngine {
     pub fn new(sample_rate: f32, _max_voices: usize) -> Self {
         let audio_params = AudioStreamParams {
             sample_rate: sample_rate as u32,
-            channels: xsynth_core::ChannelCount::Stereo,
+            channels: ChannelCount::Stereo,
         };
 
-        let config = ChannelGroupConfig {
-            channel_init_options: ChannelInitOptions { fade_out_killing: true },
-            format: SynthFormat::Custom { channels: 1 },
-            audio_params,
-            parallelism: ParallelismOptions::AUTO_PER_CHANNEL,
-        };
-
-        let core = ChannelGroup::new(config);
+        let core = Synthesizer::new(audio_params);
 
         Self {
             core,
@@ -78,8 +71,7 @@ impl SynthEngine {
             } else {
                 match SampleSoundfont::new(
                     &entry.path,
-                    self.core.stream_params().clone(),
-                    SoundfontInitOptions::default(),
+                    self.core.stream_params(),
                 ) {
                     Ok(sf) => {
                         let arc = Arc::new(sf) as Arc<dyn SoundfontBase>;
@@ -97,12 +89,12 @@ impl SynthEngine {
             soundfonts.push(sf);
 
             if entry.path.ends_with(".sf2") || entry.path.ends_with(".SF2") {
-                if let Ok(presets) = xsynth_soundfonts::sf2::load_soundfont(&entry.path, self.sample_rate as u32) {
-                    for p in presets {
+                if let Ok(sf) = dysonphere_soundfont::sf2::load(&entry.path, self.sample_rate as u32) {
+                    for p in sf.presets {
                         all_presets.push(PresetInfo {
-                            name: format!("Bank {} Prog {}", p.bank, p.preset),
+                            name: format!("Bank {} Prog {}", p.bank, p.program),
                             bank: p.bank,
-                            program: p.preset,
+                            program: p.program,
                             source_file: entry.name.clone(),
                         });
                     }
