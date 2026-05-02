@@ -20,6 +20,18 @@ pub struct Taiyang {
     last_pbr: f32,
     last_fine_tune: f32,
     last_coarse_tune: f32,
+    // Filter
+    last_cutoff: f32,
+    last_resonance: f32,
+    last_hp_cutoff: f32,
+    last_hp_resonance: f32,
+    // Envelope
+    last_env_delay: f32,
+    last_env_attack: f32,
+    last_env_hold: f32,
+    last_env_decay: f32,
+    last_env_sustain: f32,
+    last_env_release: f32,
     was_playing: bool,
 }
 
@@ -70,6 +82,18 @@ impl Default for Taiyang {
             last_pbr: -1.0,
             last_fine_tune: f32::NAN,
             last_coarse_tune: f32::NAN,
+            // Filter defaults match params defaults (Butterworth Q = 0.70710677)
+            last_cutoff: 0.0,
+            last_resonance: 0.70710677,
+            last_hp_cutoff: 0.0,
+            last_hp_resonance: 0.70710677,
+            // Envelope defaults
+            last_env_delay: -1.0,
+            last_env_attack: -1.0,
+            last_env_hold: -1.0,
+            last_env_decay: -1.0,
+            last_env_sustain: -1.0,
+            last_env_release: -1.0,
             was_playing: false,
         }
     }
@@ -141,6 +165,48 @@ impl Plugin for Taiyang {
         engine.set_coarse_tune(coarse);
         self.last_coarse_tune = coarse;
 
+        // 初始化 Filter 参数
+        let cutoff = self.params.cutoff.value();
+        engine.set_cutoff(cutoff);
+        self.last_cutoff = cutoff;
+
+        let resonance = self.params.resonance.value();
+        engine.set_resonance(resonance);
+        self.last_resonance = resonance;
+
+        let hp_cutoff = self.params.highpass_cutoff.value();
+        engine.set_highpass_cutoff(hp_cutoff);
+        self.last_hp_cutoff = hp_cutoff;
+
+        let hp_resonance = self.params.highpass_resonance.value();
+        engine.set_highpass_resonance(hp_resonance);
+        self.last_hp_resonance = hp_resonance;
+
+        // 初始化 Envelope 参数
+        let env_delay = self.params.env_delay.value();
+        engine.set_env_delay(env_delay);
+        self.last_env_delay = env_delay;
+
+        let env_attack = self.params.env_attack.value();
+        engine.set_env_attack(env_attack);
+        self.last_env_attack = env_attack;
+
+        let env_hold = self.params.env_hold.value();
+        engine.set_env_hold(env_hold);
+        self.last_env_hold = env_hold;
+
+        let env_decay = self.params.env_decay.value();
+        engine.set_env_decay(env_decay);
+        self.last_env_decay = env_decay;
+
+        let env_sustain = self.params.env_sustain.value();
+        engine.set_env_sustain(env_sustain);
+        self.last_env_sustain = env_sustain;
+
+        let env_release = self.params.env_release.value();
+        engine.set_env_release(env_release);
+        self.last_env_release = env_release;
+
         *self.engine.lock() = Some(engine);
 
         let max_frames = buffer_config.max_buffer_size as usize;
@@ -180,6 +246,20 @@ impl Plugin for Taiyang {
         let current_fine = self.params.master_fine_tune.value();
         let current_coarse = self.params.master_coarse_tune.value();
 
+        // Filter params
+        let current_cutoff = self.params.cutoff.value();
+        let current_resonance = self.params.resonance.value();
+        let current_hp_cutoff = self.params.highpass_cutoff.value();
+        let current_hp_resonance = self.params.highpass_resonance.value();
+
+        // Envelope params
+        let current_env_delay = self.params.env_delay.value();
+        let current_env_attack = self.params.env_attack.value();
+        let current_env_hold = self.params.env_hold.value();
+        let current_env_decay = self.params.env_decay.value();
+        let current_env_sustain = self.params.env_sustain.value();
+        let current_env_release = self.params.env_release.value();
+
         // 3. 短暂持有锁：处理事件 + 渲染
         let mut engine_guard = self.engine.lock();
         if let Some(ref mut engine) = engine_guard.as_mut() {
@@ -217,6 +297,58 @@ impl Plugin for Taiyang {
             if current_coarse != self.last_coarse_tune {
                 engine.set_coarse_tune(current_coarse);
                 self.last_coarse_tune = current_coarse;
+            }
+
+            // Filter parameter changes
+            if current_cutoff != self.last_cutoff {
+                engine.set_cutoff(current_cutoff);
+                self.last_cutoff = current_cutoff;
+            }
+
+            if current_resonance != self.last_resonance {
+                engine.set_resonance(current_resonance);
+                self.last_resonance = current_resonance;
+            }
+
+            if current_hp_cutoff != self.last_hp_cutoff {
+                engine.set_highpass_cutoff(current_hp_cutoff);
+                self.last_hp_cutoff = current_hp_cutoff;
+            }
+
+            if current_hp_resonance != self.last_hp_resonance {
+                engine.set_highpass_resonance(current_hp_resonance);
+                self.last_hp_resonance = current_hp_resonance;
+            }
+
+            // Envelope parameter changes
+            if current_env_delay != self.last_env_delay {
+                engine.set_env_delay(current_env_delay);
+                self.last_env_delay = current_env_delay;
+            }
+
+            if current_env_attack != self.last_env_attack {
+                engine.set_env_attack(current_env_attack);
+                self.last_env_attack = current_env_attack;
+            }
+
+            if current_env_hold != self.last_env_hold {
+                engine.set_env_hold(current_env_hold);
+                self.last_env_hold = current_env_hold;
+            }
+
+            if current_env_decay != self.last_env_decay {
+                engine.set_env_decay(current_env_decay);
+                self.last_env_decay = current_env_decay;
+            }
+
+            if current_env_sustain != self.last_env_sustain {
+                engine.set_env_sustain(current_env_sustain);
+                self.last_env_sustain = current_env_sustain;
+            }
+
+            if current_env_release != self.last_env_release {
+                engine.set_env_release(current_env_release);
+                self.last_env_release = current_env_release;
             }
 
             self.pipeline.render(buffer, engine, &self.params);

@@ -178,6 +178,79 @@ impl SynthEngine {
         ));
     }
 
+    // === Filter setters ===
+
+    fn send_control(&mut self, event: ControlEvent) {
+        self.core.send_event(SynthEvent::Channel(
+            0,
+            ChannelEvent::Audio(ChannelAudioEvent::Control(event)),
+        ));
+    }
+
+    pub fn set_cutoff(&mut self, freq: f32) {
+        let value = if freq <= 1.0 {
+            self.sample_rate / 2.0 // ensure above threshold = off
+        } else {
+            freq
+        };
+        self.send_control(ControlEvent::Cutoff(value));
+    }
+
+    pub fn set_resonance(&mut self, q: f32) {
+        self.send_control(ControlEvent::Resonance(q.max(0.01)));
+    }
+
+    pub fn set_highpass_cutoff(&mut self, freq: f32) {
+        let value = if freq <= 1.0 {
+            0.0 // ensure below threshold = off
+        } else {
+            freq
+        };
+        self.send_control(ControlEvent::HighPassCutoff(value));
+    }
+
+    pub fn set_highpass_resonance(&mut self, q: f32) {
+        self.send_control(ControlEvent::HighPassResonance(q.max(0.01)));
+    }
+
+    // === Envelope setters (-1.0 = Auto/None) ===
+
+    pub fn set_env_delay(&mut self, seconds: f32) {
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::DelayTime(seconds));
+        }
+    }
+
+    pub fn set_env_attack(&mut self, seconds: f32) {
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::AttackTime(seconds));
+        }
+    }
+
+    pub fn set_env_hold(&mut self, seconds: f32) {
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::HoldTime(seconds));
+        }
+    }
+
+    pub fn set_env_decay(&mut self, seconds: f32) {
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::DecayTime(seconds));
+        }
+    }
+
+    pub fn set_env_sustain(&mut self, level: f32) {
+        if level >= 0.0 {
+            self.send_control(ControlEvent::SustainLevel(level.clamp(0.0, 1.0)));
+        }
+    }
+
+    pub fn set_env_release(&mut self, seconds: f32) {
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::ReleaseTime(seconds));
+        }
+    }
+
     pub fn read_samples(&mut self, buffer: &mut [f32]) {
         self.core.read_samples(buffer);
     }

@@ -82,6 +82,86 @@ fn draw_params(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorState) {
             .unwrap_or(0);
         ui.label(format!("{}", voices));
     });
+
+    ui.separator();
+
+    // Filter section
+    ui.collapsing("Filter", |ui| {
+        ui.horizontal(|ui| {
+            ui.label("LP Cutoff:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.cutoff, setter,
+            ));
+
+            ui.separator();
+
+            ui.label("LP Res:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.resonance, setter,
+            ));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("HP Cutoff:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.highpass_cutoff, setter,
+            ));
+
+            ui.separator();
+
+            ui.label("HP Res:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.highpass_resonance, setter,
+            ));
+        });
+    });
+
+    ui.separator();
+
+    // Envelope section
+    ui.collapsing("Envelope", |ui| {
+        ui.horizontal(|ui| {
+            ui.label("Delay:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.env_delay, setter,
+            ));
+
+            ui.separator();
+
+            ui.label("Attack:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.env_attack, setter,
+            ));
+
+            ui.separator();
+
+            ui.label("Hold:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.env_hold, setter,
+            ));
+        });
+
+        ui.horizontal(|ui| {
+            ui.label("Decay:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.env_decay, setter,
+            ));
+
+            ui.separator();
+
+            ui.label("Sustain:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.env_sustain, setter,
+            ));
+
+            ui.separator();
+
+            ui.label("Release:");
+            ui.add(widgets::ParamSlider::for_param(
+                &state.params.env_release, setter,
+            ));
+        });
+    });
 }
 
 fn draw_soundfonts(ui: &mut egui::Ui, state: &EditorState) {
