@@ -1,4 +1,5 @@
-use dysonphere_core::event::{ChannelAudioEvent, ChannelEvent, ControlEvent, SynthEvent};
+use xsynth_core::channel::{ChannelAudioEvent, ChannelEvent, ControlEvent};
+use xsynth_core::channel_group::SynthEvent;
 use crate::engine::SynthEngine;
 
 pub fn handle_note_event(
