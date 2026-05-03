@@ -146,8 +146,8 @@ impl Default for TaiyangParams {
             // Filter
             cutoff: FloatParam::new(
                 "Cutoff",
-                0.0,
-                FloatRange::Linear { min: 0.0, max: 20000.0 },
+                20000.0,
+                FloatRange::Skewed { min: 0.0, max: 20000.0, factor: 0.3 },
             )
             .with_smoother(SmoothingStyle::None)
             .with_unit(" Hz")
@@ -164,7 +164,7 @@ impl Default for TaiyangParams {
             highpass_cutoff: FloatParam::new(
                 "HP Cutoff",
                 0.0,
-                FloatRange::Linear { min: 0.0, max: 20000.0 },
+                FloatRange::Skewed { min: 0.0, max: 20000.0, factor: 0.3 },
             )
             .with_smoother(SmoothingStyle::None)
             .with_unit(" Hz")
@@ -182,7 +182,7 @@ impl Default for TaiyangParams {
             env_delay: FloatParam::new(
                 "Delay",
                 -1.0,
-                FloatRange::Linear { min: -1.0, max: 10.0 },
+                FloatRange::Skewed { min: -0.001, max: 10.0, factor: 0.33 },
             )
             .with_smoother(SmoothingStyle::None)
             .with_value_to_string(Arc::new(env_time_formatter))
@@ -191,7 +191,7 @@ impl Default for TaiyangParams {
             env_attack: FloatParam::new(
                 "Attack",
                 -1.0,
-                FloatRange::Linear { min: -1.0, max: 10.0 },
+                FloatRange::Skewed { min: -0.001, max: 10.0, factor: 0.33 },
             )
             .with_smoother(SmoothingStyle::None)
             .with_value_to_string(Arc::new(env_time_formatter))
@@ -200,7 +200,7 @@ impl Default for TaiyangParams {
             env_hold: FloatParam::new(
                 "Hold",
                 -1.0,
-                FloatRange::Linear { min: -1.0, max: 10.0 },
+                FloatRange::Skewed { min: -0.001, max: 10.0, factor: 0.33 },
             )
             .with_smoother(SmoothingStyle::None)
             .with_value_to_string(Arc::new(env_time_formatter))
@@ -209,7 +209,7 @@ impl Default for TaiyangParams {
             env_decay: FloatParam::new(
                 "Decay",
                 -1.0,
-                FloatRange::Linear { min: -1.0, max: 10.0 },
+                FloatRange::Skewed { min: -0.001, max: 10.0, factor: 0.33 },
             )
             .with_smoother(SmoothingStyle::None)
             .with_value_to_string(Arc::new(env_time_formatter))
@@ -218,7 +218,7 @@ impl Default for TaiyangParams {
             env_sustain: FloatParam::new(
                 "Sustain",
                 -1.0,
-                FloatRange::Linear { min: -1.0, max: 1.0 },
+                FloatRange::Linear { min: -0.001, max: 1.0 },
             )
             .with_smoother(SmoothingStyle::None)
             .with_value_to_string(Arc::new(sustain_formatter))
@@ -227,7 +227,7 @@ impl Default for TaiyangParams {
             env_release: FloatParam::new(
                 "Release",
                 -1.0,
-                FloatRange::Linear { min: -1.0, max: 10.0 },
+                FloatRange::Skewed { min: -0.001, max: 10.0, factor: 0.33 },
             )
             .with_smoother(SmoothingStyle::None)
             .with_value_to_string(Arc::new(env_time_formatter))

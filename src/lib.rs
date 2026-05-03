@@ -83,7 +83,7 @@ impl Default for Taiyang {
             last_fine_tune: f32::NAN,
             last_coarse_tune: f32::NAN,
             // Filter defaults match params defaults (Butterworth Q = 0.70710677)
-            last_cutoff: 0.0,
+            last_cutoff: 20000.0,
             last_resonance: 0.70710677,
             last_hp_cutoff: 0.0,
             last_hp_resonance: 0.70710677,

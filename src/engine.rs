@@ -188,8 +188,10 @@ impl SynthEngine {
     }
 
     pub fn set_cutoff(&mut self, freq: f32) {
-        let value = if freq <= 1.0 {
-            self.sample_rate / 2.0 // ensure above threshold = off
+        let value = if freq <= 0.0 {
+            1.0 // 全截断（biquad 能接受的最低频率）
+        } else if freq >= 20000.0 {
+            self.sample_rate / 2.0 // 确保高于 threshold = 关
         } else {
             freq
         };
@@ -202,7 +204,7 @@ impl SynthEngine {
 
     pub fn set_highpass_cutoff(&mut self, freq: f32) {
         let value = if freq <= 1.0 {
-            0.0 // ensure below threshold = off
+            0.0 // 确保低于 threshold = 关
         } else {
             freq
         };
@@ -213,42 +215,30 @@ impl SynthEngine {
         self.send_control(ControlEvent::HighPassResonance(q.max(0.01)));
     }
 
-    // === Envelope setters (-1.0 = Auto/None) ===
+    // === Envelope setters (-1.0 = Auto/取消覆盖) ===
 
     pub fn set_env_delay(&mut self, seconds: f32) {
-        if seconds >= 0.0 {
-            self.send_control(ControlEvent::DelayTime(seconds));
-        }
+        self.send_control(ControlEvent::DelayTime(seconds));
     }
 
     pub fn set_env_attack(&mut self, seconds: f32) {
-        if seconds >= 0.0 {
-            self.send_control(ControlEvent::AttackTime(seconds));
-        }
+        self.send_control(ControlEvent::AttackTime(seconds));
     }
 
     pub fn set_env_hold(&mut self, seconds: f32) {
-        if seconds >= 0.0 {
-            self.send_control(ControlEvent::HoldTime(seconds));
-        }
+        self.send_control(ControlEvent::HoldTime(seconds));
     }
 
     pub fn set_env_decay(&mut self, seconds: f32) {
-        if seconds >= 0.0 {
-            self.send_control(ControlEvent::DecayTime(seconds));
-        }
+        self.send_control(ControlEvent::DecayTime(seconds));
     }
 
     pub fn set_env_sustain(&mut self, level: f32) {
-        if level >= 0.0 {
-            self.send_control(ControlEvent::SustainLevel(level.clamp(0.0, 1.0)));
-        }
+        self.send_control(ControlEvent::SustainLevel(level));
     }
 
     pub fn set_env_release(&mut self, seconds: f32) {
-        if seconds >= 0.0 {
-            self.send_control(ControlEvent::ReleaseTime(seconds));
-        }
+        self.send_control(ControlEvent::ReleaseTime(seconds));
     }
 
     pub fn read_samples(&mut self, buffer: &mut [f32]) {
