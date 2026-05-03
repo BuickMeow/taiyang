@@ -2985,7 +2985,7 @@ checksum = "b9cc00251562a284751c9973bace760d86c0276c471b4be569fe6b068ee97a56"
 [[package]]
 name = "xsynth-core"
 version = "0.4.0"
-source = "git+https://github.com/BuickMeow/xsynth.git?branch=dysonsphere#e852a527865249f9571c53da29eade19bd8f7d29"
+source = "git+https://github.com/BuickMeow/xsynth.git?branch=dysonsphere#9a3151b7636ca76e0e6be477f814facff4473162"
 dependencies = [
  "atomic_refcell",
  "biquad",
@@ -3006,7 +3006,7 @@ dependencies = [
 [[package]]
 name = "xsynth-soundfonts"
 version = "0.4.0"
-source = "git+https://github.com/BuickMeow/xsynth.git?branch=dysonsphere#e852a527865249f9571c53da29eade19bd8f7d29"
+source = "git+https://github.com/BuickMeow/xsynth.git?branch=dysonsphere#9a3151b7636ca76e0e6be477f814facff4473162"
 dependencies = [
  "encoding_rs",
  "encoding_rs_io",
