@@ -218,27 +218,39 @@ impl SynthEngine {
     // === Envelope setters (-1.0 = Auto/取消覆盖) ===
 
     pub fn set_env_delay(&mut self, seconds: f32) {
-        self.send_control(ControlEvent::DelayTime(seconds));
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::DelayTime(seconds));
+        }
     }
 
     pub fn set_env_attack(&mut self, seconds: f32) {
-        self.send_control(ControlEvent::AttackTime(seconds));
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::AttackTime(seconds));
+        }
     }
 
     pub fn set_env_hold(&mut self, seconds: f32) {
-        self.send_control(ControlEvent::HoldTime(seconds));
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::HoldTime(seconds));
+        }
     }
 
     pub fn set_env_decay(&mut self, seconds: f32) {
-        self.send_control(ControlEvent::DecayTime(seconds));
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::DecayTime(seconds));
+        }
     }
 
     pub fn set_env_sustain(&mut self, level: f32) {
-        self.send_control(ControlEvent::SustainLevel(level));
+        if level >= 0.0 {
+            self.send_control(ControlEvent::SustainLevel(level.clamp(0.0, 1.0)));
+        }
     }
 
     pub fn set_env_release(&mut self, seconds: f32) {
-        self.send_control(ControlEvent::ReleaseTime(seconds));
+        if seconds >= 0.0 {
+            self.send_control(ControlEvent::ReleaseTime(seconds));
+        }
     }
 
     pub fn read_samples(&mut self, buffer: &mut [f32]) {
