@@ -1,0 +1,11 @@
+[package]
+name = "taiyang-shared"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149e", features = ["assert_process_allocs"] }
+xsynth-core = { git = "https://github.com/BuickMeow/xsynth.git", branch = "dysonsphere" }
+xsynth-soundfonts = { git = "https://github.com/BuickMeow/xsynth.git", branch = "dysonsphere" }
+parking_lot = "0.12.5"
+serde = { version = "1.0", features = ["derive"] }

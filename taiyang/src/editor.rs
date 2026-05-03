@@ -4,16 +4,17 @@ use nih_plug_egui::{create_egui_editor, egui, widgets};
 use std::sync::Arc;
 use parking_lot::Mutex;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use taiyang_shared::engine::{SynthEngine, SoundfontEntry};
 
 pub struct EditorState {
     pub params: Arc<crate::params::TaiyangParams>,
-    pub engine: Arc<Mutex<Option<crate::engine::SynthEngine>>>,
+    pub engine: Arc<Mutex<Option<SynthEngine>>>,
     pub selected_preset_idx: Arc<AtomicUsize>,
 }
 
 pub fn create(
     params: Arc<crate::params::TaiyangParams>,
-    engine: Arc<Mutex<Option<crate::engine::SynthEngine>>>,
+    engine: Arc<Mutex<Option<SynthEngine>>>,
 ) -> Option<Box<dyn Editor>> {
     let egui_state = params.editor_state.clone();
     let state = EditorState {
@@ -220,7 +221,7 @@ fn spawn_add_soundfont_dialog(state: &EditorState) {
                     .map(|n| n.to_string_lossy().to_string())
                     .unwrap_or_else(|| "Unknown".to_string());
 
-                let entry = crate::engine::SoundfontEntry {
+                let entry = SoundfontEntry {
                     path: path_str,
                     name,
                     enabled: true,
@@ -243,7 +244,7 @@ fn reload_soundfonts(state: &EditorState) {
 
 fn reload_soundfonts_from_state(
     params: &crate::params::TaiyangParams,
-    engine: &Arc<Mutex<Option<crate::engine::SynthEngine>>>,
+    engine: &Arc<Mutex<Option<SynthEngine>>>,
 ) {
     if let Some(ref mut eng) = engine.lock().as_mut() {
         let entries = params.soundfont_entries.lock().clone();
@@ -295,7 +296,7 @@ fn draw_presets(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorState) {
                 setter.set_parameter(&state.params.selected_program, preset.program as i32);
 
                 if let Some(ref mut eng) = state.engine.lock().as_mut() {
-                    eng.send_preset(preset.bank as u8, preset.program as u8);
+                    eng.send_preset(0, preset.bank as u8, preset.program as u8);
                 }
             }
         }

@@ -2266,9 +2266,29 @@ dependencies = [
  "nih_plug_egui",
  "parking_lot",
  "rfd",
+ "taiyang-shared",
+]
+
+[[package]]
+name = "taiyang-shared"
+version = "0.1.0"
+dependencies = [
+ "nih_plug",
+ "parking_lot",
  "serde",
  "xsynth-core",
  "xsynth-soundfonts",
+]
+
+[[package]]
+name = "taiyang16"
+version = "0.1.0"
+dependencies = [
+ "nih_plug",
+ "nih_plug_egui",
+ "parking_lot",
+ "rfd",
+ "taiyang-shared",
 ]
 
 [[package]]

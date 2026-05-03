@@ -1,19 +1,3 @@
-[package]
-name = "taiyang"
-version = "0.1.0"
-edition = "2024"
-
-[lib]
-crate-type = ["cdylib", "lib"]
-
-[dependencies]
-nih_plug = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149e", features = ["assert_process_allocs"] }
-nih_plug_egui = { git = "https://github.com/robbert-vdh/nih-plug.git", rev = "28b149e" }
-
-xsynth-core = { git = "https://github.com/BuickMeow/xsynth.git", branch = "dysonsphere" }
-xsynth-soundfonts = { git = "https://github.com/BuickMeow/xsynth.git", branch = "dysonsphere" }
-#soundfont = "0.1.0"
-
-parking_lot = "0.12.5"
-rfd = "0.17.2"
-serde = { version = "1.0", features = ["derive"] }
+[workspace]
+members = ["shared", "taiyang", "taiyang16"]
+resolver = "2"
