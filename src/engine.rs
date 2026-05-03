@@ -188,12 +188,10 @@ impl SynthEngine {
     }
 
     pub fn set_cutoff(&mut self, freq: f32) {
-        let value = if freq <= 0.0 {
-            20.0 // 全截断（biquad 稳定下限）
-        } else if freq >= 20000.0 {
+        let value = if freq >= 20000.0 {
             self.sample_rate / 2.0 // 确保高于 threshold = 关
         } else {
-            freq
+            freq // 0 → 全截断，由 filter 内部增益替代处理
         };
         self.send_control(ControlEvent::Cutoff(value));
     }
