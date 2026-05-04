@@ -8,11 +8,15 @@ use xsynth_core::channel_group::SynthEvent;
 /// regardless of the MIDI channel in the event. Use this for single-channel
 /// plugins. If `None`, the MIDI channel from the event is used directly
 /// (for 16-channel plugins).
+///
+/// `min_velocity`: NoteOn events with velocity below this threshold are ignored.
+/// Default should be 1 (velocity 0 = MIDI note-off convention).
 pub fn handle_note_event(
     event: nih_plug::prelude::NoteEvent<()>,
     engine: &mut SynthEngine,
     preset_locked: bool,
     channel_override: Option<u8>,
+    min_velocity: u8,
 ) {
     match event {
         nih_plug::prelude::NoteEvent::NoteOn {
@@ -22,8 +26,8 @@ pub fn handle_note_event(
             ..
         } => {
             let ch = channel_override.unwrap_or(channel) as u32;
-            if (ch as u8) < engine.num_channels {
-                let vel = (velocity * 127.0).clamp(0.0, 127.0) as u8;
+            let vel = (velocity * 127.0).clamp(0.0, 127.0) as u8;
+            if (ch as u8) < engine.num_channels && vel > min_velocity {
                 engine.send_event(SynthEvent::Channel(
                     ch,
                     ChannelEvent::Audio(ChannelAudioEvent::NoteOn { key: note, vel }),

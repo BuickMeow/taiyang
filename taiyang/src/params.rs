@@ -50,6 +50,9 @@ pub struct TaiyangParams {
     #[id = "gain"]
     pub gain: FloatParam,
 
+    #[id = "min_vel"]
+    pub min_velocity: IntParam,
+
     #[id = "is_drum"]
     pub is_drum: BoolParam,
 
@@ -110,6 +113,7 @@ impl Default for TaiyangParams {
         Self {
             editor_state: EguiState::from_size(640, 480),
             soundfont_entries: Arc::new(Mutex::new(Vec::new())),
+            min_velocity: IntParam::new("Min Velocity", 1, IntRange::Linear { min: 0, max: 127 }),
             gain: FloatParam::new("Gain", 1.0, FloatRange::Linear { min: 0.0, max: 2.0 })
                 .with_smoother(SmoothingStyle::None)
                 .with_unit(" dB")

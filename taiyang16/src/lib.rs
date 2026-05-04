@@ -217,6 +217,7 @@ impl Plugin for Taiyang16 {
 
         // Read params
         let preset_locked = self.params.preset_locked.value();
+        let min_velocity = self.params.min_velocity.value() as u8;
         let selected_channel = self.params.selected_channel.value() as u8;
 
         // Per-channel params (for the currently selected channel)
@@ -246,7 +247,7 @@ impl Plugin for Taiyang16 {
 
             // Route MIDI events to their respective channels (no override)
             for event in midi_events {
-                midi::handle_note_event(event, engine, preset_locked, None);
+                midi::handle_note_event(event, engine, preset_locked, None, min_velocity);
             }
 
             // --- UI-initiated per-channel changes ---

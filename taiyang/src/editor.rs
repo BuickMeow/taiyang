@@ -56,6 +56,14 @@ fn draw_params(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorState) {
 
         ui.separator();
 
+        ui.label("Min Vel:");
+        let mut min_vel = state.params.min_velocity.value();
+        if ui.add(egui::DragValue::new(&mut min_vel).range(0..=127)).changed() {
+            setter.set_parameter(&state.params.min_velocity, min_vel);
+        }
+
+        ui.separator();
+
         ui.label("PBR:");
         let mut pbr = state.params.pitch_bend_range.value();
         if ui.add(egui::DragValue::new(&mut pbr).range(0.0..=24.0)).changed() {

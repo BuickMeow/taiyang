@@ -233,6 +233,7 @@ impl Plugin for Taiyang {
         }
 
         let preset_locked = self.params.preset_locked.value();
+        let min_velocity = self.params.min_velocity.value() as u8;
         let current_bank = self.params.selected_bank.value() as u8;
         let current_program = self.params.selected_program.value() as u8;
         let current_is_drum = self.params.is_drum.value();
@@ -260,7 +261,7 @@ impl Plugin for Taiyang {
             self.was_playing = is_playing;
 
             for event in midi_events {
-                midi::handle_note_event(event, engine, preset_locked, Some(CHANNEL));
+                midi::handle_note_event(event, engine, preset_locked, Some(CHANNEL), min_velocity);
             }
 
             if current_bank != self.last_bank || current_program != self.last_program {

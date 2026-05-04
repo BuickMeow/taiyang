@@ -124,6 +124,17 @@ fn draw_global_params(ui: &mut egui::Ui, setter: &ParamSetter, state: &EditorSta
 
         ui.separator();
 
+        ui.label("Min Vel:");
+        let mut min_vel = state.params.min_velocity.value();
+        if ui
+            .add(egui::DragValue::new(&mut min_vel).range(0..=127))
+            .changed()
+        {
+            setter.set_parameter(&state.params.min_velocity, min_vel);
+        }
+
+        ui.separator();
+
         ui.label("Voices:");
         let voices = state
             .engine
